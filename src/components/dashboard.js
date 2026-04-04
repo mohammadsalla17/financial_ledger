@@ -76,7 +76,7 @@ function Modal({ title, onClose, children }) {
       <div className="bg-white rounded-xl border border-gray-200 w-full max-w-sm p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-[15px] font-medium text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none cursor-pointer">✕</button>
         </div>
         {children}
       </div>
@@ -100,11 +100,11 @@ const sel = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white
 function Actions({ onCancel, onSubmit, label = 'Save', disabled }) {
   return (
     <div className="flex gap-2 justify-end mt-5">
-      <button onClick={onCancel} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700">
+      <button onClick={onCancel} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 cursor-pointer">
         Cancel
       </button>
       <button onClick={onSubmit} disabled={disabled}
-        className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50">
+        className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 cursor-pointer">
         {label}
       </button>
     </div>
@@ -140,7 +140,7 @@ function AddAccountModal({ onClose, onSaved }) {
         <div className="flex gap-2 flex-wrap">
           {COLORS.map(c => (
             <button key={c} onClick={() => setColor(c)}
-              className={`w-7 h-7 rounded-full border-2 transition-transform ${color === c ? 'border-gray-900 scale-110' : 'border-transparent'}`}
+              className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${color === c ? 'border-gray-900 scale-110' : 'border-transparent'}`}
               style={{ background: c }} />
           ))}
         </div>
@@ -259,11 +259,38 @@ function AddTransactionModal({ recordId, recordLabel, onClose, onSaved }) {
 // ─── Transfer ─────────────────────────────────────────────────────────────────
 
 function TransferModal({ accounts, onClose, onSaved }) {
+  const [mode,   setMode]   = useState('account') // 'account' | 'pot'
   const [fromId, setFromId] = useState(accounts[0]?.id ?? '')
   const [toId,   setToId]   = useState(accounts[1]?.id ?? '')
+  const [pots,   setPots]   = useState(null)
   const [amount, setAmount] = useState('')
   const [desc,   setDesc]   = useState('')
   const [busy,   setBusy]   = useState(false)
+
+  useEffect(() => {
+    fetch('/api/records?kind=pot')
+      .then(r => r.json())
+      .then(data => {
+        setPots(data)
+        if (mode === 'pot') {
+          setFromId(data[0]?.id ?? '')
+          setToId(data[1]?.id ?? '')
+        }
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function switchMode(next) {
+    setMode(next)
+    setFromId('')
+    setToId('')
+    if (next === 'account') {
+      setFromId(accounts[0]?.id ?? '')
+      setToId(accounts[1]?.id ?? '')
+    } else if (pots) {
+      setFromId(pots[0]?.id ?? '')
+      setToId(pots[1]?.id ?? '')
+    }
+  }
 
   async function submit() {
     if (!amount || fromId === toId || busy) return
@@ -283,16 +310,36 @@ function TransferModal({ accounts, onClose, onSaved }) {
     onClose()
   }
 
+  const fromOptions = mode === 'account'
+    ? accounts.map(a => ({ id: a.id, label: `${a.name} (${fmt(a.balance)})` }))
+    : (pots ?? []).map(p => ({ id: p.id, label: `${p.accountName} — ${p.label} (${fmt(p.value)})` }))
+
+  const toOptions = mode === 'account'
+    ? accounts.map(a => ({ id: a.id, label: `${a.name} (${fmt(a.balance)})` }))
+    : (pots ?? []).map(p => ({ id: p.id, label: `${p.accountName} — ${p.label} (${fmt(p.value)})` }))
+
   return (
-    <Modal title="Transfer between accounts" onClose={onClose}>
+    <Modal title="Transfer" onClose={onClose}>
+      {/* Mode toggle */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg mb-4">
+        {[['account', 'Between accounts'], ['pot', 'Between pots']].map(([val, label]) => (
+          <button key={val} onClick={() => switchMode(val)}
+            className={`flex-1 text-[13px] py-1.5 rounded-md transition-colors cursor-pointer ${
+              mode === val ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <Field label="From">
         <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
-          {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({fmt(a.balance)})</option>)}
+          {fromOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
       </Field>
       <Field label="To">
         <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
-          {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({fmt(a.balance)})</option>)}
+          {toOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
       </Field>
       <Field label="Amount">
@@ -302,7 +349,7 @@ function TransferModal({ accounts, onClose, onSaved }) {
       <Field label="Description (optional)">
         <input className={inp} value={desc} onChange={e => setDesc(e.target.value)} />
       </Field>
-      <Actions onCancel={onClose} onSubmit={submit} label={busy ? 'Transferring…' : 'Transfer'} disabled={busy} />
+      <Actions onCancel={onClose} onSubmit={submit} label={busy ? 'Transferring…' : 'Transfer'} disabled={busy || fromId === toId || !amount} />
     </Modal>
   )
 }
@@ -339,7 +386,7 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onDelete }) {
         onClick={toggle}
         className={cn(
           'w-7 h-7 flex items-center justify-center rounded-md text-[18px] tracking-widest leading-none',
-          'text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors',
+          'text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer',
           open && 'bg-gray-100 text-gray-700'
         )}
       >···</button>
@@ -379,17 +426,17 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onDelete }) {
           {/* Actions */}
           <div className="py-1">
             <button onClick={() => { setOpen(false); onAddTransaction() }}
-              className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5">
+              className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
               <span className="text-gray-400 w-4 text-center">+</span> Add transaction
             </button>
             {record.kind !== 'pot' && (
               <button onClick={() => { setOpen(false); onEditValue() }}
-                className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5">
+                className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
                 <span className="text-gray-400 w-4 text-center">✎</span> Edit value
               </button>
             )}
             <button onClick={() => { setOpen(false); onDelete() }}
-              className="w-full text-left px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2.5">
+              className="w-full text-left px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2.5 cursor-pointer">
               <span className="w-4 text-center">✕</span> Delete record
             </button>
           </div>
@@ -508,11 +555,11 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal }) {
           <span className="text-[17px] font-medium text-gray-900">{fmt(account.balance)}</span>
           <button
             onClick={e => { e.stopPropagation(); onAddRecord() }}
-            className="text-[12px] px-2.5 py-1 border border-gray-200 rounded-md hover:bg-gray-100 text-gray-600"
+            className="text-[12px] px-2.5 py-1 border border-gray-200 rounded-md hover:bg-gray-100 text-gray-600 cursor-pointer"
           >+ Record</button>
           <button
             onClick={e => { e.stopPropagation(); onDelete() }}
-            className="text-[12px] px-2.5 py-1 border border-red-100 rounded-md hover:bg-red-50 text-red-500"
+            className="text-[12px] px-2.5 py-1 border border-red-100 rounded-md hover:bg-red-50 text-red-500 cursor-pointer"
           >Delete</button>
           <span className="text-gray-400 text-sm select-none">{open ? '⌃' : '⌄'}</span>
         </div>
@@ -597,15 +644,15 @@ export default function Dashboard() {
           <div className="flex gap-2 flex-wrap justify-end">
             <button
               onClick={() => setModal({ type: 'addRecord', accountId: accounts[0]?.id })}
-              className="px-3.5 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700"
+              className="px-3.5 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700 cursor-pointer"
             >+ Add record</button>
             <button
               onClick={() => setModal({ type: 'transfer' })}
-              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700"
+              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
             >⇆ Transfer</button>
             <button
               onClick={() => setModal({ type: 'addAccount' })}
-              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700"
+              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
             >+ Account</button>
           </div>
         </div>
@@ -618,7 +665,7 @@ export default function Dashboard() {
                 <p className="text-[15px] text-gray-400 mb-2">No accounts yet.</p>
                 <button
                   onClick={() => setModal({ type: 'addAccount' })}
-                  className="text-[13px] text-gray-600 underline underline-offset-2"
+                  className="text-[13px] text-gray-600 underline underline-offset-2 cursor-pointer"
                 >Add your first account</button>
               </div>
             )}

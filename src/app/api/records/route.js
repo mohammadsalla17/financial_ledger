@@ -5,15 +5,23 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url)
     const accountId = searchParams.get('accountId')
+    const kind      = searchParams.get('kind')
 
-    if (!accountId) {
-      return NextResponse.json({ error: 'accountId is required' }, { status: 400 })
+    if (!accountId && !kind) {
+      return NextResponse.json({ error: 'accountId or kind is required' }, { status: 400 })
     }
 
+    const where = {}
+    if (accountId) where.accountId = accountId
+    if (kind)      where.kind      = kind
+
+    const include = { transactions: true }
+    if (!accountId) include.account = true
+
     const records = await prisma.record.findMany({
-      where:   { accountId },
+      where,
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
-      include: { transactions: true },
+      include,
     })
 
     const withValues = records.map((record) => {
@@ -32,6 +40,7 @@ export async function GET(req) {
       return {
         id:          record.id,
         accountId:   record.accountId,
+        accountName: record.account?.name ?? null,
         label:       record.label,
         kind:        record.kind,
         fixedAmount: record.fixedAmount?.toString() ?? null,
