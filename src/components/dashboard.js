@@ -518,7 +518,12 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh }) {
 // ─── Account Card ─────────────────────────────────────────────────────────────
 
 function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal }) {
-  const [open,    setOpen]    = useState(true)
+  const [open,    setOpen]    = useState(() => {
+    try {
+      const v = localStorage.getItem(`acct-open:${account.id}`)
+      return v === null ? true : v === 'true'
+    } catch { return true }
+  })
   const [records, setRecords] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -545,7 +550,11 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal }) {
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-gray-50 rounded-xl transition-colors"
-        onClick={() => setOpen(v => !v)}
+        onClick={() => setOpen(v => {
+          const next = !v
+          try { localStorage.setItem(`acct-open:${account.id}`, String(next)) } catch {}
+          return next
+        })}
       >
         <div className="flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: account.color }} />
@@ -603,6 +612,151 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal }) {
   )
 }
 
+// ─── Scheduled Transfers ──────────────────────────────────────────────────────
+
+const FREQ_LABELS = { weekly: 'Weekly', biweekly: 'Bi-weekly', monthly: 'Monthly' }
+
+function ScheduledTransfersModal({ onClose, onSaved }) {
+  const [schedules, setSchedules] = useState(null)
+  const [pots,      setPots]      = useState(null)
+  const [adding,    setAdding]    = useState(false)
+  const [busy,      setBusy]      = useState(false)
+
+  // form state
+  const [label,     setLabel]     = useState('')
+  const [kind,      setKind]      = useState('income')
+  const [fromId,    setFromId]    = useState('')
+  const [toId,      setToId]      = useState('')
+  const [amount,    setAmount]    = useState('')
+  const [frequency, setFrequency] = useState('monthly')
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
+
+  const fetchSchedules = useCallback(async () => {
+    const res  = await fetch('/api/scheduled-transfers')
+    const data = await res.json()
+    setSchedules(Array.isArray(data) ? data : [])
+  }, [])
+
+  useEffect(() => {
+    fetchSchedules()
+    fetch('/api/records?kind=pot')
+      .then(r => r.json())
+      .then(data => {
+        const list = Array.isArray(data) ? data : []
+        setPots(list)
+        setFromId(list[0]?.id ?? '')
+        setToId(list[1]?.id ?? '')
+      })
+  }, [fetchSchedules])
+
+  async function deleteSchedule(id) {
+    await fetch(`/api/scheduled-transfers/${id}`, { method: 'DELETE' })
+    fetchSchedules()
+    onSaved()
+  }
+
+  async function submit() {
+    if (!label.trim() || !toId || !amount || busy) return
+    setBusy(true)
+    await fetch('/api/scheduled-transfers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, kind, fromId: kind === 'transfer' ? fromId : undefined, toId, amount: parseFloat(amount), frequency, startDate }),
+    })
+    setBusy(false)
+    setAdding(false)
+    setLabel('')
+    setAmount('')
+    fetchSchedules()
+    onSaved()
+  }
+
+  return (
+    <Modal title="Scheduled transfers" onClose={onClose}>
+      {/* List */}
+      {schedules === null ? (
+        <Spinner />
+      ) : schedules.length === 0 && !adding ? (
+        <p className="text-[13px] text-gray-400 text-center py-4">No scheduled transfers yet.</p>
+      ) : (
+        <div className="space-y-2 mb-4">
+          {schedules.map(s => (
+            <div key={s.id} className="flex items-start justify-between gap-3 px-3 py-2.5 bg-gray-50 rounded-lg">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-gray-800 truncate">{s.label}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  {s.kind === 'income' ? `→ ${s.toLabel}` : `${s.fromLabel} → ${s.toLabel}`}
+                </p>
+                <p className="text-[11px] text-gray-400">
+                  {FREQ_LABELS[s.frequency]} · next {s.nextRun}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[13px] font-medium text-emerald-600">+{fmt(s.amount)}</span>
+                <button onClick={() => deleteSchedule(s.id)}
+                  className="text-[11px] text-red-400 hover:text-red-600 cursor-pointer">✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add form */}
+      {adding ? (
+        <div className="border-t border-gray-100 pt-4 space-y-3">
+          <Field label="Description">
+            <input className={inp} value={label} onChange={e => setLabel(e.target.value)}
+              placeholder="e.g. Monthly salary" autoFocus />
+          </Field>
+          <Field label="Type">
+            <select className={sel} value={kind} onChange={e => setKind(e.target.value)}>
+              <option value="income">Income (deposit into pot)</option>
+              <option value="transfer">Transfer (pot → pot)</option>
+            </select>
+          </Field>
+          {kind === 'transfer' && (
+            <Field label="From pot">
+              <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
+                {(pots ?? []).map(p => (
+                  <option key={p.id} value={p.id}>{p.accountName} — {p.label} ({fmt(p.value)})</option>
+                ))}
+              </select>
+            </Field>
+          )}
+          <Field label={kind === 'transfer' ? 'To pot' : 'Target pot'}>
+            <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
+              {(pots ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.accountName} — {p.label} ({fmt(p.value)})</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Amount">
+            <input className={inp} type="number" min="0" value={amount}
+              onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+          </Field>
+          <Field label="Frequency">
+            <select className={sel} value={frequency} onChange={e => setFrequency(e.target.value)}>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </Field>
+          <Field label="First run date">
+            <input className={inp} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </Field>
+          <Actions onCancel={() => setAdding(false)} onSubmit={submit}
+            label={busy ? 'Saving…' : 'Save schedule'} disabled={busy || !label.trim() || !toId || !amount} />
+        </div>
+      ) : (
+        <button onClick={() => setAdding(true)}
+          className="w-full py-2 text-[13px] border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors cursor-pointer">
+          + New scheduled transfer
+        </button>
+      )}
+    </Modal>
+  )
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -616,7 +770,13 @@ export default function Dashboard() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchAccounts() }, [fetchAccounts])
+  useEffect(() => {
+    fetchAccounts()
+    fetch('/api/scheduled-transfers/run', { method: 'POST' })
+      .then(r => r.json())
+      .then(({ executed }) => { if (executed > 0) fetchAccounts() })
+      .catch(() => {})
+  }, [fetchAccounts])
 
   async function deleteAccount(id) {
     if (!confirm('Delete this account and all its records?')) return
@@ -654,6 +814,10 @@ export default function Dashboard() {
               onClick={() => setModal({ type: 'addAccount' })}
               className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
             >+ Account</button>
+            <button
+              onClick={() => setModal({ type: 'scheduled' })}
+              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
+            >⏱ Scheduled</button>
           </div>
         </div>
 
@@ -705,6 +869,9 @@ export default function Dashboard() {
       )}
       {modal.type === 'transfer' && (
         <TransferModal accounts={accounts} onClose={closeModal} onSaved={fetchAccounts} />
+      )}
+      {modal.type === 'scheduled' && (
+        <ScheduledTransfersModal onClose={closeModal} onSaved={fetchAccounts} />
       )}
     </div>
   )

@@ -56,3 +56,8 @@ export type Record = Prisma.RecordModel
  * 
  */
 export type Transaction = Prisma.TransactionModel
+/**
+ * Model ScheduledTransfer
+ * 
+ */
+export type ScheduledTransfer = Prisma.ScheduledTransferModel

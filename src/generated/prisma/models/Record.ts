@@ -246,6 +246,8 @@ export type RecordWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Record"> | Date | string
   account?: Prisma.XOR<Prisma.AccountScalarRelationFilter, Prisma.AccountWhereInput>
   transactions?: Prisma.TransactionListRelationFilter
+  scheduledFrom?: Prisma.ScheduledTransferListRelationFilter
+  scheduledTo?: Prisma.ScheduledTransferListRelationFilter
 }
 
 export type RecordOrderByWithRelationInput = {
@@ -259,6 +261,8 @@ export type RecordOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   account?: Prisma.AccountOrderByWithRelationInput
   transactions?: Prisma.TransactionOrderByRelationAggregateInput
+  scheduledFrom?: Prisma.ScheduledTransferOrderByRelationAggregateInput
+  scheduledTo?: Prisma.ScheduledTransferOrderByRelationAggregateInput
 }
 
 export type RecordWhereUniqueInput = Prisma.AtLeast<{
@@ -275,6 +279,8 @@ export type RecordWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Record"> | Date | string
   account?: Prisma.XOR<Prisma.AccountScalarRelationFilter, Prisma.AccountWhereInput>
   transactions?: Prisma.TransactionListRelationFilter
+  scheduledFrom?: Prisma.ScheduledTransferListRelationFilter
+  scheduledTo?: Prisma.ScheduledTransferListRelationFilter
 }, "id">
 
 export type RecordOrderByWithAggregationInput = {
@@ -317,6 +323,8 @@ export type RecordCreateInput = {
   createdAt?: Date | string
   account: Prisma.AccountCreateNestedOneWithoutRecordsInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutRecordInput
+  scheduledFrom?: Prisma.ScheduledTransferCreateNestedManyWithoutFromRecordInput
+  scheduledTo?: Prisma.ScheduledTransferCreateNestedManyWithoutToRecordInput
 }
 
 export type RecordUncheckedCreateInput = {
@@ -329,6 +337,8 @@ export type RecordUncheckedCreateInput = {
   displayOrder?: number
   createdAt?: Date | string
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutRecordInput
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutFromRecordInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutToRecordInput
 }
 
 export type RecordUpdateInput = {
@@ -341,6 +351,8 @@ export type RecordUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   account?: Prisma.AccountUpdateOneRequiredWithoutRecordsNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutRecordNestedInput
+  scheduledFrom?: Prisma.ScheduledTransferUpdateManyWithoutFromRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUpdateManyWithoutToRecordNestedInput
 }
 
 export type RecordUncheckedUpdateInput = {
@@ -353,6 +365,8 @@ export type RecordUncheckedUpdateInput = {
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutRecordNestedInput
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutFromRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutToRecordNestedInput
 }
 
 export type RecordCreateManyInput = {
@@ -445,6 +459,11 @@ export type RecordScalarRelationFilter = {
   isNot?: Prisma.RecordWhereInput
 }
 
+export type RecordNullableScalarRelationFilter = {
+  is?: Prisma.RecordWhereInput | null
+  isNot?: Prisma.RecordWhereInput | null
+}
+
 export type RecordCreateNestedManyWithoutAccountInput = {
   create?: Prisma.XOR<Prisma.RecordCreateWithoutAccountInput, Prisma.RecordUncheckedCreateWithoutAccountInput> | Prisma.RecordCreateWithoutAccountInput[] | Prisma.RecordUncheckedCreateWithoutAccountInput[]
   connectOrCreate?: Prisma.RecordCreateOrConnectWithoutAccountInput | Prisma.RecordCreateOrConnectWithoutAccountInput[]
@@ -513,6 +532,36 @@ export type RecordUpdateOneRequiredWithoutTransactionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.RecordUpdateToOneWithWhereWithoutTransactionsInput, Prisma.RecordUpdateWithoutTransactionsInput>, Prisma.RecordUncheckedUpdateWithoutTransactionsInput>
 }
 
+export type RecordCreateNestedOneWithoutScheduledFromInput = {
+  create?: Prisma.XOR<Prisma.RecordCreateWithoutScheduledFromInput, Prisma.RecordUncheckedCreateWithoutScheduledFromInput>
+  connectOrCreate?: Prisma.RecordCreateOrConnectWithoutScheduledFromInput
+  connect?: Prisma.RecordWhereUniqueInput
+}
+
+export type RecordCreateNestedOneWithoutScheduledToInput = {
+  create?: Prisma.XOR<Prisma.RecordCreateWithoutScheduledToInput, Prisma.RecordUncheckedCreateWithoutScheduledToInput>
+  connectOrCreate?: Prisma.RecordCreateOrConnectWithoutScheduledToInput
+  connect?: Prisma.RecordWhereUniqueInput
+}
+
+export type RecordUpdateOneWithoutScheduledFromNestedInput = {
+  create?: Prisma.XOR<Prisma.RecordCreateWithoutScheduledFromInput, Prisma.RecordUncheckedCreateWithoutScheduledFromInput>
+  connectOrCreate?: Prisma.RecordCreateOrConnectWithoutScheduledFromInput
+  upsert?: Prisma.RecordUpsertWithoutScheduledFromInput
+  disconnect?: Prisma.RecordWhereInput | boolean
+  delete?: Prisma.RecordWhereInput | boolean
+  connect?: Prisma.RecordWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RecordUpdateToOneWithWhereWithoutScheduledFromInput, Prisma.RecordUpdateWithoutScheduledFromInput>, Prisma.RecordUncheckedUpdateWithoutScheduledFromInput>
+}
+
+export type RecordUpdateOneRequiredWithoutScheduledToNestedInput = {
+  create?: Prisma.XOR<Prisma.RecordCreateWithoutScheduledToInput, Prisma.RecordUncheckedCreateWithoutScheduledToInput>
+  connectOrCreate?: Prisma.RecordCreateOrConnectWithoutScheduledToInput
+  upsert?: Prisma.RecordUpsertWithoutScheduledToInput
+  connect?: Prisma.RecordWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RecordUpdateToOneWithWhereWithoutScheduledToInput, Prisma.RecordUpdateWithoutScheduledToInput>, Prisma.RecordUncheckedUpdateWithoutScheduledToInput>
+}
+
 export type RecordCreateWithoutAccountInput = {
   id?: string
   label: string
@@ -522,6 +571,8 @@ export type RecordCreateWithoutAccountInput = {
   displayOrder?: number
   createdAt?: Date | string
   transactions?: Prisma.TransactionCreateNestedManyWithoutRecordInput
+  scheduledFrom?: Prisma.ScheduledTransferCreateNestedManyWithoutFromRecordInput
+  scheduledTo?: Prisma.ScheduledTransferCreateNestedManyWithoutToRecordInput
 }
 
 export type RecordUncheckedCreateWithoutAccountInput = {
@@ -533,6 +584,8 @@ export type RecordUncheckedCreateWithoutAccountInput = {
   displayOrder?: number
   createdAt?: Date | string
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutRecordInput
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutFromRecordInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutToRecordInput
 }
 
 export type RecordCreateOrConnectWithoutAccountInput = {
@@ -584,6 +637,8 @@ export type RecordCreateWithoutTransactionsInput = {
   displayOrder?: number
   createdAt?: Date | string
   account: Prisma.AccountCreateNestedOneWithoutRecordsInput
+  scheduledFrom?: Prisma.ScheduledTransferCreateNestedManyWithoutFromRecordInput
+  scheduledTo?: Prisma.ScheduledTransferCreateNestedManyWithoutToRecordInput
 }
 
 export type RecordUncheckedCreateWithoutTransactionsInput = {
@@ -595,6 +650,8 @@ export type RecordUncheckedCreateWithoutTransactionsInput = {
   note?: string
   displayOrder?: number
   createdAt?: Date | string
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutFromRecordInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutToRecordInput
 }
 
 export type RecordCreateOrConnectWithoutTransactionsInput = {
@@ -622,6 +679,8 @@ export type RecordUpdateWithoutTransactionsInput = {
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   account?: Prisma.AccountUpdateOneRequiredWithoutRecordsNestedInput
+  scheduledFrom?: Prisma.ScheduledTransferUpdateManyWithoutFromRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUpdateManyWithoutToRecordNestedInput
 }
 
 export type RecordUncheckedUpdateWithoutTransactionsInput = {
@@ -633,6 +692,144 @@ export type RecordUncheckedUpdateWithoutTransactionsInput = {
   note?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutFromRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutToRecordNestedInput
+}
+
+export type RecordCreateWithoutScheduledFromInput = {
+  id?: string
+  label: string
+  kind: $Enums.RecordKind
+  fixedAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: string
+  displayOrder?: number
+  createdAt?: Date | string
+  account: Prisma.AccountCreateNestedOneWithoutRecordsInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutRecordInput
+  scheduledTo?: Prisma.ScheduledTransferCreateNestedManyWithoutToRecordInput
+}
+
+export type RecordUncheckedCreateWithoutScheduledFromInput = {
+  id?: string
+  accountId: string
+  label: string
+  kind: $Enums.RecordKind
+  fixedAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: string
+  displayOrder?: number
+  createdAt?: Date | string
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutRecordInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutToRecordInput
+}
+
+export type RecordCreateOrConnectWithoutScheduledFromInput = {
+  where: Prisma.RecordWhereUniqueInput
+  create: Prisma.XOR<Prisma.RecordCreateWithoutScheduledFromInput, Prisma.RecordUncheckedCreateWithoutScheduledFromInput>
+}
+
+export type RecordCreateWithoutScheduledToInput = {
+  id?: string
+  label: string
+  kind: $Enums.RecordKind
+  fixedAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: string
+  displayOrder?: number
+  createdAt?: Date | string
+  account: Prisma.AccountCreateNestedOneWithoutRecordsInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutRecordInput
+  scheduledFrom?: Prisma.ScheduledTransferCreateNestedManyWithoutFromRecordInput
+}
+
+export type RecordUncheckedCreateWithoutScheduledToInput = {
+  id?: string
+  accountId: string
+  label: string
+  kind: $Enums.RecordKind
+  fixedAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: string
+  displayOrder?: number
+  createdAt?: Date | string
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutRecordInput
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedCreateNestedManyWithoutFromRecordInput
+}
+
+export type RecordCreateOrConnectWithoutScheduledToInput = {
+  where: Prisma.RecordWhereUniqueInput
+  create: Prisma.XOR<Prisma.RecordCreateWithoutScheduledToInput, Prisma.RecordUncheckedCreateWithoutScheduledToInput>
+}
+
+export type RecordUpsertWithoutScheduledFromInput = {
+  update: Prisma.XOR<Prisma.RecordUpdateWithoutScheduledFromInput, Prisma.RecordUncheckedUpdateWithoutScheduledFromInput>
+  create: Prisma.XOR<Prisma.RecordCreateWithoutScheduledFromInput, Prisma.RecordUncheckedCreateWithoutScheduledFromInput>
+  where?: Prisma.RecordWhereInput
+}
+
+export type RecordUpdateToOneWithWhereWithoutScheduledFromInput = {
+  where?: Prisma.RecordWhereInput
+  data: Prisma.XOR<Prisma.RecordUpdateWithoutScheduledFromInput, Prisma.RecordUncheckedUpdateWithoutScheduledFromInput>
+}
+
+export type RecordUpdateWithoutScheduledFromInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumRecordKindFieldUpdateOperationsInput | $Enums.RecordKind
+  fixedAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: Prisma.StringFieldUpdateOperationsInput | string
+  displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  account?: Prisma.AccountUpdateOneRequiredWithoutRecordsNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUpdateManyWithoutToRecordNestedInput
+}
+
+export type RecordUncheckedUpdateWithoutScheduledFromInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumRecordKindFieldUpdateOperationsInput | $Enums.RecordKind
+  fixedAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: Prisma.StringFieldUpdateOperationsInput | string
+  displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutToRecordNestedInput
+}
+
+export type RecordUpsertWithoutScheduledToInput = {
+  update: Prisma.XOR<Prisma.RecordUpdateWithoutScheduledToInput, Prisma.RecordUncheckedUpdateWithoutScheduledToInput>
+  create: Prisma.XOR<Prisma.RecordCreateWithoutScheduledToInput, Prisma.RecordUncheckedCreateWithoutScheduledToInput>
+  where?: Prisma.RecordWhereInput
+}
+
+export type RecordUpdateToOneWithWhereWithoutScheduledToInput = {
+  where?: Prisma.RecordWhereInput
+  data: Prisma.XOR<Prisma.RecordUpdateWithoutScheduledToInput, Prisma.RecordUncheckedUpdateWithoutScheduledToInput>
+}
+
+export type RecordUpdateWithoutScheduledToInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumRecordKindFieldUpdateOperationsInput | $Enums.RecordKind
+  fixedAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: Prisma.StringFieldUpdateOperationsInput | string
+  displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  account?: Prisma.AccountUpdateOneRequiredWithoutRecordsNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutRecordNestedInput
+  scheduledFrom?: Prisma.ScheduledTransferUpdateManyWithoutFromRecordNestedInput
+}
+
+export type RecordUncheckedUpdateWithoutScheduledToInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumRecordKindFieldUpdateOperationsInput | $Enums.RecordKind
+  fixedAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  note?: Prisma.StringFieldUpdateOperationsInput | string
+  displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutRecordNestedInput
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutFromRecordNestedInput
 }
 
 export type RecordCreateManyAccountInput = {
@@ -654,6 +851,8 @@ export type RecordUpdateWithoutAccountInput = {
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   transactions?: Prisma.TransactionUpdateManyWithoutRecordNestedInput
+  scheduledFrom?: Prisma.ScheduledTransferUpdateManyWithoutFromRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUpdateManyWithoutToRecordNestedInput
 }
 
 export type RecordUncheckedUpdateWithoutAccountInput = {
@@ -665,6 +864,8 @@ export type RecordUncheckedUpdateWithoutAccountInput = {
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutRecordNestedInput
+  scheduledFrom?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutFromRecordNestedInput
+  scheduledTo?: Prisma.ScheduledTransferUncheckedUpdateManyWithoutToRecordNestedInput
 }
 
 export type RecordUncheckedUpdateManyWithoutAccountInput = {
@@ -684,10 +885,14 @@ export type RecordUncheckedUpdateManyWithoutAccountInput = {
 
 export type RecordCountOutputType = {
   transactions: number
+  scheduledFrom: number
+  scheduledTo: number
 }
 
 export type RecordCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   transactions?: boolean | RecordCountOutputTypeCountTransactionsArgs
+  scheduledFrom?: boolean | RecordCountOutputTypeCountScheduledFromArgs
+  scheduledTo?: boolean | RecordCountOutputTypeCountScheduledToArgs
 }
 
 /**
@@ -707,6 +912,20 @@ export type RecordCountOutputTypeCountTransactionsArgs<ExtArgs extends runtime.T
   where?: Prisma.TransactionWhereInput
 }
 
+/**
+ * RecordCountOutputType without action
+ */
+export type RecordCountOutputTypeCountScheduledFromArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ScheduledTransferWhereInput
+}
+
+/**
+ * RecordCountOutputType without action
+ */
+export type RecordCountOutputTypeCountScheduledToArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ScheduledTransferWhereInput
+}
+
 
 export type RecordSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -719,6 +938,8 @@ export type RecordSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   createdAt?: boolean
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
   transactions?: boolean | Prisma.Record$transactionsArgs<ExtArgs>
+  scheduledFrom?: boolean | Prisma.Record$scheduledFromArgs<ExtArgs>
+  scheduledTo?: boolean | Prisma.Record$scheduledToArgs<ExtArgs>
   _count?: boolean | Prisma.RecordCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["record"]>
 
@@ -761,6 +982,8 @@ export type RecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 export type RecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
   transactions?: boolean | Prisma.Record$transactionsArgs<ExtArgs>
+  scheduledFrom?: boolean | Prisma.Record$scheduledFromArgs<ExtArgs>
+  scheduledTo?: boolean | Prisma.Record$scheduledToArgs<ExtArgs>
   _count?: boolean | Prisma.RecordCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RecordIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -775,6 +998,8 @@ export type $RecordPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   objects: {
     account: Prisma.$AccountPayload<ExtArgs>
     transactions: Prisma.$TransactionPayload<ExtArgs>[]
+    scheduledFrom: Prisma.$ScheduledTransferPayload<ExtArgs>[]
+    scheduledTo: Prisma.$ScheduledTransferPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1181,6 +1406,8 @@ export interface Prisma__RecordClient<T, Null = never, ExtArgs extends runtime.T
   readonly [Symbol.toStringTag]: "PrismaPromise"
   account<T extends Prisma.AccountDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AccountDefaultArgs<ExtArgs>>): Prisma.Prisma__AccountClient<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   transactions<T extends Prisma.Record$transactionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Record$transactionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  scheduledFrom<T extends Prisma.Record$scheduledFromArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Record$scheduledFromArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ScheduledTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  scheduledTo<T extends Prisma.Record$scheduledToArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Record$scheduledToArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ScheduledTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1640,6 +1867,54 @@ export type Record$transactionsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.TransactionScalarFieldEnum | Prisma.TransactionScalarFieldEnum[]
+}
+
+/**
+ * Record.scheduledFrom
+ */
+export type Record$scheduledFromArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ScheduledTransfer
+   */
+  select?: Prisma.ScheduledTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ScheduledTransfer
+   */
+  omit?: Prisma.ScheduledTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ScheduledTransferInclude<ExtArgs> | null
+  where?: Prisma.ScheduledTransferWhereInput
+  orderBy?: Prisma.ScheduledTransferOrderByWithRelationInput | Prisma.ScheduledTransferOrderByWithRelationInput[]
+  cursor?: Prisma.ScheduledTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ScheduledTransferScalarFieldEnum | Prisma.ScheduledTransferScalarFieldEnum[]
+}
+
+/**
+ * Record.scheduledTo
+ */
+export type Record$scheduledToArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ScheduledTransfer
+   */
+  select?: Prisma.ScheduledTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ScheduledTransfer
+   */
+  omit?: Prisma.ScheduledTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ScheduledTransferInclude<ExtArgs> | null
+  where?: Prisma.ScheduledTransferWhereInput
+  orderBy?: Prisma.ScheduledTransferOrderByWithRelationInput | Prisma.ScheduledTransferOrderByWithRelationInput[]
+  cursor?: Prisma.ScheduledTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ScheduledTransferScalarFieldEnum | Prisma.ScheduledTransferScalarFieldEnum[]
 }
 
 /**

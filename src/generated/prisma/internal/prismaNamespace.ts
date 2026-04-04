@@ -386,7 +386,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   Account: 'Account',
   Record: 'Record',
-  Transaction: 'Transaction'
+  Transaction: 'Transaction',
+  ScheduledTransfer: 'ScheduledTransfer'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -402,7 +403,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "account" | "record" | "transaction"
+    modelProps: "account" | "record" | "transaction" | "scheduledTransfer"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -628,6 +629,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ScheduledTransfer: {
+      payload: Prisma.$ScheduledTransferPayload<ExtArgs>
+      fields: Prisma.ScheduledTransferFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ScheduledTransferFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ScheduledTransferFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>
+        }
+        findFirst: {
+          args: Prisma.ScheduledTransferFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ScheduledTransferFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>
+        }
+        findMany: {
+          args: Prisma.ScheduledTransferFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>[]
+        }
+        create: {
+          args: Prisma.ScheduledTransferCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>
+        }
+        createMany: {
+          args: Prisma.ScheduledTransferCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ScheduledTransferCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>[]
+        }
+        delete: {
+          args: Prisma.ScheduledTransferDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>
+        }
+        update: {
+          args: Prisma.ScheduledTransferUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>
+        }
+        deleteMany: {
+          args: Prisma.ScheduledTransferDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ScheduledTransferUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ScheduledTransferUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>[]
+        }
+        upsert: {
+          args: Prisma.ScheduledTransferUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledTransferPayload>
+        }
+        aggregate: {
+          args: Prisma.ScheduledTransferAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateScheduledTransfer>
+        }
+        groupBy: {
+          args: Prisma.ScheduledTransferGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ScheduledTransferGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ScheduledTransferCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ScheduledTransferCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -703,6 +778,22 @@ export const TransactionScalarFieldEnum = {
 } as const
 
 export type TransactionScalarFieldEnum = (typeof TransactionScalarFieldEnum)[keyof typeof TransactionScalarFieldEnum]
+
+
+export const ScheduledTransferScalarFieldEnum = {
+  id: 'id',
+  label: 'label',
+  kind: 'kind',
+  fromId: 'fromId',
+  toId: 'toId',
+  amount: 'amount',
+  frequency: 'frequency',
+  nextRun: 'nextRun',
+  lastRun: 'lastRun',
+  createdAt: 'createdAt'
+} as const
+
+export type ScheduledTransferScalarFieldEnum = (typeof ScheduledTransferScalarFieldEnum)[keyof typeof ScheduledTransferScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -916,6 +1007,7 @@ export type GlobalOmitConfig = {
   account?: Prisma.AccountOmit
   record?: Prisma.RecordOmit
   transaction?: Prisma.TransactionOmit
+  scheduledTransfer?: Prisma.ScheduledTransferOmit
 }
 
 /* Types for Logging */

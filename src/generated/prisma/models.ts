@@ -11,4 +11,5 @@
 export type * from './models/Account.ts'
 export type * from './models/Record.ts'
 export type * from './models/Transaction.ts'
+export type * from './models/ScheduledTransfer.ts'
 export type * from './commonInputTypes.ts'
