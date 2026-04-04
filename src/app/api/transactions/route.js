@@ -6,21 +6,25 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url)
     const recordId = searchParams.get('recordId')
-    const limit    = parseInt(searchParams.get('limit') ?? '5', 10)
+    const recent   = searchParams.get('recent')
+    const limit    = parseInt(searchParams.get('limit') ?? (recent ? recent : '5'), 10)
 
-    if (!recordId) {
-      return NextResponse.json({ error: 'recordId is required' }, { status: 400 })
+    if (!recordId && !recent) {
+      return NextResponse.json({ error: 'recordId or recent is required' }, { status: 400 })
     }
 
     const txns = await prisma.transaction.findMany({
-      where:   { recordId },
+      where:   recordId ? { recordId } : undefined,
       orderBy: [{ txnDate: 'desc' }, { createdAt: 'desc' }],
       take:    limit,
+      include: recent ? { record: { include: { account: true } } } : undefined,
     })
 
     const mapped = txns.map((t) => ({
       id:          t.id,
       recordId:    t.recordId,
+      recordLabel: t.record?.label ?? null,
+      accountName: t.record?.account?.name ?? null,
       description: t.description,
       amount:      parseFloat(t.amount.toString()),
       txnDate:     t.txnDate instanceof Date

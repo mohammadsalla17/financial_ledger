@@ -517,7 +517,7 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh }) {
 
 // ─── Account Card ─────────────────────────────────────────────────────────────
 
-function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal }) {
+function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, refreshTick }) {
   const [open,    setOpen]    = useState(() => {
     try {
       const v = localStorage.getItem(`acct-open:${account.id}`)
@@ -535,6 +535,12 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal }) {
   }, [account.id])
 
   useEffect(() => { if (open && records === null) fetchRecords() }, [open, records, fetchRecords])
+  // Re-fetch when a parent-triggered refresh occurs (e.g. after a transfer)
+  const isFirstRender = useRef(true)
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (open) fetchRecords()
+  }, [refreshTick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function deleteRecord(id) {
     await fetch(`/api/records/${id}`, { method: 'DELETE' })
@@ -609,6 +615,43 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal }) {
         </div>
       )}
     </div>
+  )
+}
+
+// ─── Recent Transactions ──────────────────────────────────────────────────────
+
+function RecentTransactionsModal({ onClose }) {
+  const [txns, setTxns] = useState(null)
+
+  useEffect(() => {
+    fetch('/api/transactions?recent=10')
+      .then(r => r.json())
+      .then(data => setTxns(Array.isArray(data) ? data : []))
+      .catch(() => setTxns([]))
+  }, [])
+
+  return (
+    <Modal title="Recent transactions" onClose={onClose}>
+      {txns === null ? <Spinner /> : txns.length === 0 ? (
+        <p className="text-[13px] text-gray-400 text-center py-4">No transactions yet.</p>
+      ) : (
+        <div className="space-y-px">
+          {txns.map(t => (
+            <div key={t.id} className="flex items-start justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0">
+              <div className="min-w-0">
+                <p className="text-[13px] text-gray-800 truncate">{t.description}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  {t.accountName} · {t.recordLabel} · {t.txnDate}
+                </p>
+              </div>
+              <span className={`text-[13px] font-medium shrink-0 ${t.amount >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                {fmtSigned(t.amount)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
   )
 }
 
@@ -760,14 +803,16 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [accounts, setAccounts] = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [modal,    setModal]    = useState({ type: null })
+  const [accounts,    setAccounts]    = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [modal,       setModal]       = useState({ type: null })
+  const [refreshTick, setRefreshTick] = useState(0)
 
   const fetchAccounts = useCallback(async () => {
     const res = await fetch('/api/accounts')
     setAccounts(await res.json())
     setLoading(false)
+    setRefreshTick(t => t + 1)
   }, [])
 
   useEffect(() => {
@@ -818,6 +863,11 @@ export default function Dashboard() {
               onClick={() => setModal({ type: 'scheduled' })}
               className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
             >⏱ Scheduled</button>
+            <button
+              onClick={() => setModal({ type: 'history' })}
+              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
+              title="Recent transactions"
+            >🕐 History</button>
           </div>
         </div>
 
@@ -841,6 +891,7 @@ export default function Dashboard() {
                 onDelete={() => deleteAccount(account.id)}
                 onRefresh={fetchAccounts}
                 openModal={setModal}
+                refreshTick={refreshTick}
               />
             ))}
           </div>
@@ -872,6 +923,9 @@ export default function Dashboard() {
       )}
       {modal.type === 'scheduled' && (
         <ScheduledTransfersModal onClose={closeModal} onSaved={fetchAccounts} />
+      )}
+      {modal.type === 'history' && (
+        <RecentTransactionsModal onClose={closeModal} />
       )}
     </div>
   )
