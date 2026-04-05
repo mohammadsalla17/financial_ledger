@@ -721,7 +721,7 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
         <Spinner />
       ) : schedules.length === 0 && !adding ? (
         <p className="text-[13px] text-gray-400 text-center py-4">No scheduled transfers yet.</p>
-      ) : (
+      ) : !adding ? (
         <div className="space-y-2 mb-4">
           {schedules.map(s => (
             <div key={s.id} className="flex items-start justify-between gap-3 px-3 py-2.5 bg-gray-50 rounded-lg">
@@ -742,7 +742,7 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Add form */}
       {adding ? (
