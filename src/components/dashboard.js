@@ -524,8 +524,19 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
       return v === null ? true : v === 'true'
     } catch { return true }
   })
-  const [records, setRecords] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [records,  setRecords]  = useState(null)
+  const [loading,  setLoading]  = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuOpen])
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -568,14 +579,25 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[17px] font-medium text-gray-900">{fmt(account.balance)}</span>
-          <button
-            onClick={e => { e.stopPropagation(); onAddRecord() }}
-            className="text-[12px] px-2.5 py-1 border border-gray-200 rounded-md hover:bg-gray-100 text-gray-600 cursor-pointer"
-          >+ Record</button>
-          <button
-            onClick={e => { e.stopPropagation(); onDelete() }}
-            className="text-[12px] px-2.5 py-1 border border-red-100 rounded-md hover:bg-red-50 text-red-500 cursor-pointer"
-          >Delete</button>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+              className="text-[16px] px-2 py-0.5 rounded-md hover:bg-gray-100 text-gray-500 cursor-pointer leading-none"
+              title="Account options"
+            >⋯</button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                <button
+                  onClick={e => { e.stopPropagation(); setMenuOpen(false); onAddRecord() }}
+                  className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >+ Add record</button>
+                <button
+                  onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete() }}
+                  className="w-full text-left px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 cursor-pointer"
+                >Delete account</button>
+              </div>
+            )}
+          </div>
           <span className="text-gray-400 text-sm select-none">{open ? '⌃' : '⌄'}</span>
         </div>
       </div>
