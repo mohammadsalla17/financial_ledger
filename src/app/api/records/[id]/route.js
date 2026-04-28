@@ -6,8 +6,16 @@ export async function PATCH(req, { params }) {
     const { id } = await params
     const body   = await req.json()
 
+    if (body.displayOrder !== undefined) {
+      const updated = await prisma.record.update({
+        where: { id },
+        data:  { displayOrder: body.displayOrder },
+      })
+      return NextResponse.json({ ...updated, fixedAmount: updated.fixedAmount?.toString() ?? null })
+    }
+
     if (body.fixedAmount === undefined) {
-      return NextResponse.json({ error: 'fixedAmount is required' }, { status: 400 })
+      return NextResponse.json({ error: 'fixedAmount or displayOrder is required' }, { status: 400 })
     }
 
     // Fetch previous value so we can log it in the transaction history

@@ -448,7 +448,7 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onDelete }) {
 
 // ─── Record Row ───────────────────────────────────────────────────────────────
 
-function RecordRow({ record, onAddTransaction, onDelete, onRefresh }) {
+function RecordRow({ record, onAddTransaction, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
   const [editing, setEditing] = useState(false)
   const [draft,   setDraft]   = useState(String(record.value))
   const inputRef = useRef(null)
@@ -469,10 +469,27 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh }) {
   }
 
   const pos = record.value >= 0
+  const dropShadow = showDropAbove
+    ? { boxShadow: '0 -3px 0 0 #3b82f6' }
+    : showDropBelow
+    ? { boxShadow: '0 3px 0 0 #3b82f6' }
+    : undefined
 
   return (
-    <div className="grid items-center gap-2 px-4 py-2.5 border-t border-gray-100 hover:bg-gray-50/60 transition-colors"
-      style={{ gridTemplateColumns: '1fr auto auto auto' }}>
+    <div
+      className={cn(
+        'grid items-center gap-2 pl-1 pr-4 py-2.5 border-t border-gray-100 hover:bg-gray-50/60 transition-colors',
+        isDragging && 'opacity-40'
+      )}
+      style={{ gridTemplateColumns: 'auto 1fr auto auto auto', ...dropShadow }}
+      draggable={draggable}
+      onDragStart={(e) => onDragStart?.(e, record)}
+      onDragOver={(e) => { const r = e.currentTarget.getBoundingClientRect(); onDragOver?.(e, record, r) }}
+      onDrop={(e) => onDrop?.(e, record)}
+      onDragEnd={() => onDragEnd?.()}
+    >
+
+      <span className="text-gray-300 cursor-grab px-1.5 select-none text-[15px] leading-none">⠿</span>
 
       <div className="min-w-0">
         <p className="text-[14px] text-gray-800 truncate">{record.label}</p>
@@ -517,16 +534,18 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh }) {
 
 // ─── Account Card ─────────────────────────────────────────────────────────────
 
-function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, refreshTick }) {
+function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, refreshTick, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
   const [open,    setOpen]    = useState(() => {
     try {
       const v = localStorage.getItem(`acct-open:${account.id}`)
       return v === null ? true : v === 'true'
     } catch { return true }
   })
-  const [records,  setRecords]  = useState(null)
-  const [loading,  setLoading]  = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [records,       setRecords]       = useState(null)
+  const [loading,       setLoading]       = useState(false)
+  const [menuOpen,      setMenuOpen]      = useState(false)
+  const [draggedRecord,      setDraggedRecord]      = useState(null)
+  const [dragOverRecordIdx,  setDragOverRecordIdx]  = useState(null)
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -559,21 +578,80 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
     onRefresh()
   }
 
+  function handleRecordDragStart(e, record) {
+    setDraggedRecord(record)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function handleRecordDragOver(e, record, rect) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const hoverIdx = records.findIndex(r => r.id === record.id)
+    setDragOverRecordIdx(e.clientY > rect.top + rect.height / 2 ? hoverIdx + 1 : hoverIdx)
+  }
+
+  async function handleRecordDrop(e, targetRecord) {
+    e.preventDefault()
+    if (!draggedRecord) return
+
+    const fromIdx = records.findIndex(r => r.id === draggedRecord.id)
+    let   toIdx   = dragOverRecordIdx ?? records.findIndex(r => r.id === targetRecord.id)
+
+    setDragOverRecordIdx(null)
+    setDraggedRecord(null)
+
+    if (toIdx > fromIdx) toIdx--
+    if (fromIdx === toIdx) return
+
+    const next = [...records]
+    next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, records[fromIdx])
+    setRecords(next)
+
+    await Promise.all(next.map((rec, idx) =>
+      fetch(`/api/records/${rec.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayOrder: idx }),
+      })
+    ))
+  }
+
+  function handleRecordDragEnd() {
+    setDraggedRecord(null)
+    setDragOverRecordIdx(null)
+  }
+
   const total = records?.reduce((s, r) => s + r.value, 0) ?? 0
 
+  const dropShadow = showDropAbove
+    ? { boxShadow: '0 -3px 0 0 #3b82f6' }
+    : showDropBelow
+    ? { boxShadow: '0 3px 0 0 #3b82f6' }
+    : undefined
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-visible">
+    <div
+      className={cn('bg-white border border-gray-200 rounded-xl overflow-visible', isDragging && 'opacity-40')}
+      style={dropShadow}
+      draggable={draggable}
+      onDragStart={(e) => onDragStart?.(e, account)}
+      onDragOver={(e) => { const r = e.currentTarget.getBoundingClientRect(); onDragOver?.(e, account, r) }}
+      onDrop={(e) => { if (draggedRecord) return; onDrop?.(e, account) }}
+      onDragEnd={() => onDragEnd?.()}
+    >
 
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-gray-50 rounded-xl transition-colors"
+        className="flex items-center justify-between px-3 py-3.5 cursor-grab hover:bg-gray-50 rounded-xl transition-colors select-none"
         onClick={() => setOpen(v => {
           const next = !v
           try { localStorage.setItem(`acct-open:${account.id}`, String(next)) } catch {}
           return next
         })}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          <span className="text-gray-300 px-1 text-[15px] leading-none shrink-0">⠿</span>
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: account.color }} />
           <span className="text-[15px] font-medium text-gray-900">{account.name}</span>
         </div>
@@ -618,15 +696,29 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
             <p className="text-center text-[13px] text-gray-400 py-6">No records yet.</p>
           )}
 
-          {!loading && records?.map(rec => (
-            <RecordRow
-              key={rec.id}
-              record={rec}
-              onAddTransaction={() => openModal({ type: 'addTransaction', recordId: rec.id, recordLabel: rec.label })}
-              onDelete={() => deleteRecord(rec.id)}
-              onRefresh={() => { fetchRecords(); onRefresh() }}
-            />
-          ))}
+          {!loading && records?.map((rec, index) => {
+            const fromIdx   = records.findIndex(r => r.id === draggedRecord?.id)
+            const isNoOp    = dragOverRecordIdx === fromIdx || dragOverRecordIdx === fromIdx + 1
+            const showAbove = !!draggedRecord && dragOverRecordIdx === index && !isNoOp
+            const showBelow = !!draggedRecord && index === records.length - 1 && dragOverRecordIdx === records.length && !isNoOp
+            return (
+              <RecordRow
+                key={rec.id}
+                record={rec}
+                onAddTransaction={() => openModal({ type: 'addTransaction', recordId: rec.id, recordLabel: rec.label })}
+                onDelete={() => deleteRecord(rec.id)}
+                onRefresh={() => { fetchRecords(); onRefresh() }}
+                draggable={true}
+                isDragging={draggedRecord?.id === rec.id}
+                showDropAbove={showAbove}
+                showDropBelow={showBelow}
+                onDragStart={handleRecordDragStart}
+                onDragOver={handleRecordDragOver}
+                onDrop={handleRecordDrop}
+                onDragEnd={handleRecordDragEnd}
+              />
+            )
+          })}
 
           {!loading && records?.length > 0 && (
             <div className="flex justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-100">
@@ -825,10 +917,12 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [accounts,    setAccounts]    = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [modal,       setModal]       = useState({ type: null })
-  const [refreshTick, setRefreshTick] = useState(0)
+  const [accounts,       setAccounts]       = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [modal,          setModal]          = useState({ type: null })
+  const [refreshTick,    setRefreshTick]    = useState(0)
+  const [draggedAccount, setDraggedAccount] = useState(null)
+  const [dragOverIndex,  setDragOverIndex]  = useState(null)
 
   const fetchAccounts = useCallback(async () => {
     const res = await fetch('/api/accounts')
@@ -849,6 +943,50 @@ export default function Dashboard() {
     if (!confirm('Delete this account and all its records?')) return
     await fetch(`/api/accounts/${id}`, { method: 'DELETE' })
     fetchAccounts()
+  }
+
+  function handleAccountDragStart(e, account) {
+    setDraggedAccount(account)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function handleAccountDragOver(e, account, rect) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const hoverIdx = accounts.findIndex(a => a.id === account.id)
+    setDragOverIndex(e.clientY > rect.top + rect.height / 2 ? hoverIdx + 1 : hoverIdx)
+  }
+
+  async function handleAccountDrop(e, targetAccount) {
+    e.preventDefault()
+    if (!draggedAccount) return
+
+    const fromIdx = accounts.findIndex(a => a.id === draggedAccount.id)
+    let   toIdx   = dragOverIndex ?? accounts.findIndex(a => a.id === targetAccount.id)
+
+    setDragOverIndex(null)
+    setDraggedAccount(null)
+
+    if (toIdx > fromIdx) toIdx--
+    if (fromIdx === toIdx) return
+
+    const next = [...accounts]
+    next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, accounts[fromIdx])
+    setAccounts(next)
+
+    await Promise.all(next.map((acc, idx) =>
+      fetch(`/api/accounts/${acc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayOrder: idx }),
+      })
+    ))
+  }
+
+  function handleAccountDragEnd() {
+    setDraggedAccount(null)
+    setDragOverIndex(null)
   }
 
   const netWorth  = accounts.reduce((s, a) => s + a.balance, 0)
@@ -905,17 +1043,31 @@ export default function Dashboard() {
                 >Add your first account</button>
               </div>
             )}
-            {accounts.map(account => (
-              <AccountCard
-                key={account.id}
-                account={account}
-                onAddRecord={() => setModal({ type: 'addRecord', accountId: account.id })}
-                onDelete={() => deleteAccount(account.id)}
-                onRefresh={fetchAccounts}
-                openModal={setModal}
-                refreshTick={refreshTick}
-              />
-            ))}
+            {accounts.map((account, index) => {
+              const fromIdx   = accounts.findIndex(a => a.id === draggedAccount?.id)
+              const isNoOp    = dragOverIndex === fromIdx || dragOverIndex === fromIdx + 1
+              const showAbove = !!draggedAccount && dragOverIndex === index && !isNoOp
+              const showBelow = !!draggedAccount && index === accounts.length - 1 && dragOverIndex === accounts.length && !isNoOp
+              return (
+                <AccountCard
+                  key={account.id}
+                  account={account}
+                  onAddRecord={() => setModal({ type: 'addRecord', accountId: account.id })}
+                  onDelete={() => deleteAccount(account.id)}
+                  onRefresh={fetchAccounts}
+                  openModal={setModal}
+                  refreshTick={refreshTick}
+                  draggable={true}
+                  isDragging={draggedAccount?.id === account.id}
+                  showDropAbove={showAbove}
+                  showDropBelow={showBelow}
+                  onDragStart={handleAccountDragStart}
+                  onDragOver={handleAccountDragOver}
+                  onDrop={handleAccountDrop}
+                  onDragEnd={handleAccountDragEnd}
+                />
+              )
+            })}
           </div>
         )}
       </div>
