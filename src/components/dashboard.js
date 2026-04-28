@@ -356,7 +356,7 @@ function TransferModal({ accounts, onClose, onSaved }) {
 
 // ─── Three-dot menu ───────────────────────────────────────────────────────────
 
-function RecordMenu({ record, onAddTransaction, onEditValue, onDelete }) {
+function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onDelete }) {
   const [open,    setOpen]    = useState(false)
   const [txns,    setTxns]    = useState(null)
   const [loading, setLoading] = useState(false)
@@ -429,6 +429,10 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onDelete }) {
               className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
               <span className="text-gray-400 w-4 text-center">+</span> Add transaction
             </button>
+            <button onClick={() => { setOpen(false); onRename() }}
+              className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
+              <span className="text-gray-400 w-4 text-center">Aa</span> Rename
+            </button>
             {record.kind !== 'pot' && (
               <button onClick={() => { setOpen(false); onEditValue() }}
                 className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
@@ -449,11 +453,15 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onDelete }) {
 // ─── Record Row ───────────────────────────────────────────────────────────────
 
 function RecordRow({ record, onAddTransaction, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
-  const [editing, setEditing] = useState(false)
-  const [draft,   setDraft]   = useState(String(record.value))
-  const inputRef = useRef(null)
+  const [editing,   setEditing]   = useState(false)
+  const [draft,     setDraft]     = useState(String(record.value))
+  const [renaming,  setRenaming]  = useState(false)
+  const [draftName, setDraftName] = useState(record.label)
+  const inputRef  = useRef(null)
+  const renameRef = useRef(null)
 
-  useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
+  useEffect(() => { if (editing)  inputRef.current?.focus()  }, [editing])
+  useEffect(() => { if (renaming) renameRef.current?.focus() }, [renaming])
 
   async function commitEdit() {
     const val = parseFloat(draft)
@@ -466,6 +474,21 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh, draggable, i
       onRefresh()
     }
     setEditing(false)
+  }
+
+  async function commitRename() {
+    const name = draftName.trim()
+    if (name && name !== record.label) {
+      await fetch(`/api/records/${record.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: name }),
+      })
+      onRefresh()
+    } else {
+      setDraftName(record.label)
+    }
+    setRenaming(false)
   }
 
   const pos = record.value >= 0
@@ -492,7 +515,18 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh, draggable, i
       <span className="text-gray-300 cursor-grab px-1.5 select-none text-[15px] leading-none">⠿</span>
 
       <div className="min-w-0">
-        <p className="text-[14px] text-gray-800 truncate">{record.label}</p>
+        {renaming ? (
+          <input
+            ref={renameRef}
+            value={draftName}
+            onChange={e => setDraftName(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={e => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { setDraftName(record.label); setRenaming(false) } }}
+            className="w-full text-[14px] text-gray-800 px-1.5 py-0.5 border border-gray-300 rounded-md focus:outline-none focus:border-gray-500"
+          />
+        ) : (
+          <p className="text-[14px] text-gray-800 truncate">{record.label}</p>
+        )}
         {record.note && <p className="text-[12px] text-gray-400">{record.note}</p>}
       </div>
 
@@ -525,6 +559,7 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh, draggable, i
       <RecordMenu
         record={record}
         onAddTransaction={onAddTransaction}
+        onRename={() => setRenaming(true)}
         onEditValue={() => setEditing(true)}
         onDelete={onDelete}
       />
@@ -544,9 +579,14 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
   const [records,       setRecords]       = useState(null)
   const [loading,       setLoading]       = useState(false)
   const [menuOpen,      setMenuOpen]      = useState(false)
-  const [draggedRecord,      setDraggedRecord]      = useState(null)
-  const [dragOverRecordIdx,  setDragOverRecordIdx]  = useState(null)
-  const menuRef = useRef(null)
+  const [draggedRecord,     setDraggedRecord]     = useState(null)
+  const [dragOverRecordIdx, setDragOverRecordIdx] = useState(null)
+  const [renamingAccount,   setRenamingAccount]   = useState(false)
+  const [draftAccountName,  setDraftAccountName]  = useState(account.name)
+  const menuRef      = useRef(null)
+  const accountNameRef = useRef(null)
+
+  useEffect(() => { if (renamingAccount) accountNameRef.current?.focus() }, [renamingAccount])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -576,6 +616,21 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
     await fetch(`/api/records/${id}`, { method: 'DELETE' })
     fetchRecords()
     onRefresh()
+  }
+
+  async function commitAccountRename() {
+    const name = draftAccountName.trim()
+    if (name && name !== account.name) {
+      await fetch(`/api/accounts/${account.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      onRefresh()
+    } else {
+      setDraftAccountName(account.name)
+    }
+    setRenamingAccount(false)
   }
 
   function handleRecordDragStart(e, record) {
@@ -653,7 +708,19 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
         <div className="flex items-center gap-2">
           <span className="text-gray-300 px-1 text-[15px] leading-none shrink-0">⠿</span>
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: account.color }} />
-          <span className="text-[15px] font-medium text-gray-900">{account.name}</span>
+          {renamingAccount ? (
+            <input
+              ref={accountNameRef}
+              value={draftAccountName}
+              onChange={e => setDraftAccountName(e.target.value)}
+              onBlur={commitAccountRename}
+              onKeyDown={e => { if (e.key === 'Enter') commitAccountRename(); if (e.key === 'Escape') { setDraftAccountName(account.name); setRenamingAccount(false) } }}
+              onClick={e => e.stopPropagation()}
+              className="text-[15px] font-medium text-gray-900 px-1.5 py-0.5 border border-gray-300 rounded-md focus:outline-none focus:border-gray-500 cursor-text select-text"
+            />
+          ) : (
+            <span className="text-[15px] font-medium text-gray-900">{account.name}</span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[17px] font-medium text-gray-900">{fmt(account.balance)}</span>
@@ -669,6 +736,10 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onAddRecord() }}
                   className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 cursor-pointer"
                 >+ Add record</button>
+                <button
+                  onClick={e => { e.stopPropagation(); setMenuOpen(false); setDraftAccountName(account.name); setRenamingAccount(true) }}
+                  className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >Rename</button>
                 <button
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete() }}
                   className="w-full text-left px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 cursor-pointer"

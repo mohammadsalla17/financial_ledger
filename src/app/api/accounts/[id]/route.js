@@ -6,8 +6,19 @@ export async function PATCH(req, { params }) {
     const { id } = await params
     const body   = await req.json()
 
+    if (body.name !== undefined) {
+      if (!body.name.trim()) {
+        return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+      }
+      const updated = await prisma.account.update({
+        where: { id },
+        data:  { name: body.name.trim() },
+      })
+      return NextResponse.json(updated)
+    }
+
     if (body.displayOrder === undefined) {
-      return NextResponse.json({ error: 'displayOrder is required' }, { status: 400 })
+      return NextResponse.json({ error: 'name or displayOrder is required' }, { status: 400 })
     }
 
     const updated = await prisma.account.update({

@@ -14,8 +14,19 @@ export async function PATCH(req, { params }) {
       return NextResponse.json({ ...updated, fixedAmount: updated.fixedAmount?.toString() ?? null })
     }
 
+    if (body.label !== undefined) {
+      if (!body.label.trim()) {
+        return NextResponse.json({ error: 'Label is required' }, { status: 400 })
+      }
+      const updated = await prisma.record.update({
+        where: { id },
+        data:  { label: body.label.trim() },
+      })
+      return NextResponse.json({ ...updated, fixedAmount: updated.fixedAmount?.toString() ?? null })
+    }
+
     if (body.fixedAmount === undefined) {
-      return NextResponse.json({ error: 'fixedAmount or displayOrder is required' }, { status: 400 })
+      return NextResponse.json({ error: 'fixedAmount, label, or displayOrder is required' }, { status: 400 })
     }
 
     // Fetch previous value so we can log it in the transaction history
