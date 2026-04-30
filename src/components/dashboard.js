@@ -258,14 +258,16 @@ function AddTransactionModal({ recordId, recordLabel, onClose, onSaved }) {
 
 // ─── Transfer ─────────────────────────────────────────────────────────────────
 
-function TransferModal({ accounts, onClose, onSaved }) {
-  const [mode,   setMode]   = useState('account') // 'account' | 'pot'
-  const [fromId, setFromId] = useState(accounts[0]?.id ?? '')
-  const [toId,   setToId]   = useState(accounts[1]?.id ?? '')
-  const [pots,   setPots]   = useState(null)
-  const [amount, setAmount] = useState('')
-  const [desc,   setDesc]   = useState('')
-  const [busy,   setBusy]   = useState(false)
+function TransferModal({ accounts, onClose, onSaved, initialFromPotId, initialFromAccountName }) {
+  const [mode,        setMode]        = useState(initialFromPotId ? 'pot' : 'account')
+  const [fromId,      setFromId]      = useState(initialFromPotId ?? accounts[0]?.id ?? '')
+  const [toId,        setToId]        = useState(initialFromPotId ? '' : (accounts[1]?.id ?? ''))
+  const [fromAccount, setFromAccount] = useState(initialFromAccountName ?? '')
+  const [toAccount,   setToAccount]   = useState('')
+  const [pots,        setPots]        = useState(null)
+  const [amount,      setAmount]      = useState('')
+  const [desc,        setDesc]        = useState('')
+  const [busy,        setBusy]        = useState(false)
 
   useEffect(() => {
     fetch('/api/records?kind=pot')
@@ -273,22 +275,28 @@ function TransferModal({ accounts, onClose, onSaved }) {
       .then(data => {
         setPots(data)
         if (mode === 'pot') {
-          setFromId(data[0]?.id ?? '')
-          setToId(data[1]?.id ?? '')
+          if (!initialFromPotId) {
+            setFromAccount(data[0]?.accountName ?? '')
+            setFromId(data[0]?.id ?? '')
+          }
+          const firstOther = data.find(p => p.id !== (initialFromPotId ?? data[0]?.id))
+          setToAccount(firstOther?.accountName ?? data[0]?.accountName ?? '')
+          setToId(firstOther?.id ?? '')
         }
       })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function switchMode(next) {
     setMode(next)
-    setFromId('')
-    setToId('')
     if (next === 'account') {
       setFromId(accounts[0]?.id ?? '')
       setToId(accounts[1]?.id ?? '')
-    } else if (pots) {
-      setFromId(pots[0]?.id ?? '')
-      setToId(pots[1]?.id ?? '')
+    } else {
+      const list = pots ?? []
+      setFromAccount(list[0]?.accountName ?? '')
+      setFromId(list[0]?.id ?? '')
+      setToAccount(list[1]?.accountName ?? list[0]?.accountName ?? '')
+      setToId(list[1]?.id ?? '')
     }
   }
 
@@ -310,13 +318,7 @@ function TransferModal({ accounts, onClose, onSaved }) {
     onClose()
   }
 
-  const fromOptions = mode === 'account'
-    ? accounts.map(a => ({ id: a.id, label: `${a.name} (${fmt(a.balance)})` }))
-    : (pots ?? []).map(p => ({ id: p.id, label: `${p.accountName} — ${p.label} (${fmt(p.value)})` }))
-
-  const toOptions = mode === 'account'
-    ? accounts.map(a => ({ id: a.id, label: `${a.name} (${fmt(a.balance)})` }))
-    : (pots ?? []).map(p => ({ id: p.id, label: `${p.accountName} — ${p.label} (${fmt(p.value)})` }))
+  const potAccounts = [...new Set((pots ?? []).map(p => p.accountName))]
 
   return (
     <Modal title="Transfer" onClose={onClose}>
@@ -332,16 +334,54 @@ function TransferModal({ accounts, onClose, onSaved }) {
         ))}
       </div>
 
-      <Field label="From">
-        <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
-          {fromOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-        </select>
-      </Field>
-      <Field label="To">
-        <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
-          {toOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-        </select>
-      </Field>
+      {mode === 'account' ? (
+        <>
+          <Field label="From">
+            <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({fmt(a.balance)})</option>)}
+            </select>
+          </Field>
+          <Field label="To">
+            <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({fmt(a.balance)})</option>)}
+            </select>
+          </Field>
+        </>
+      ) : (
+        <>
+          <Field label="From">
+            <select className={sel} value={fromAccount} onChange={e => {
+              setFromAccount(e.target.value)
+              setFromId((pots ?? []).find(p => p.accountName === e.target.value)?.id ?? '')
+            }}>
+              {potAccounts.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <div className="mt-1.5 ml-3 pl-3 border-l-2 border-gray-200">
+              <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
+                {(pots ?? []).filter(p => p.accountName === fromAccount).map(p => (
+                  <option key={p.id} value={p.id}>{p.label} ({fmt(p.value)})</option>
+                ))}
+              </select>
+            </div>
+          </Field>
+          <Field label="To">
+            <select className={sel} value={toAccount} onChange={e => {
+              setToAccount(e.target.value)
+              setToId((pots ?? []).find(p => p.accountName === e.target.value)?.id ?? '')
+            }}>
+              {potAccounts.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <div className="mt-1.5 ml-3 pl-3 border-l-2 border-gray-200">
+              <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
+                {(pots ?? []).filter(p => p.accountName === toAccount).map(p => (
+                  <option key={p.id} value={p.id}>{p.label} ({fmt(p.value)})</option>
+                ))}
+              </select>
+            </div>
+          </Field>
+        </>
+      )}
+
       <Field label="Amount">
         <input className={inp} type="number" min="0" value={amount}
           onChange={e => setAmount(e.target.value)} placeholder="0.00" autoFocus />
@@ -356,7 +396,7 @@ function TransferModal({ accounts, onClose, onSaved }) {
 
 // ─── Three-dot menu ───────────────────────────────────────────────────────────
 
-function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onDelete }) {
+function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfer, onDelete }) {
   const [open,    setOpen]    = useState(false)
   const [txns,    setTxns]    = useState(null)
   const [loading, setLoading] = useState(false)
@@ -429,6 +469,12 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onDelete 
               className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
               <span className="text-gray-400 w-4 text-center">+</span> Add transaction
             </button>
+            {record.kind === 'pot' && (
+              <button onClick={() => { setOpen(false); onTransfer() }}
+                className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
+                <span className="text-gray-400 w-4 text-center">⇆</span> Transfer
+              </button>
+            )}
             <button onClick={() => { setOpen(false); onRename() }}
               className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
               <span className="text-gray-400 w-4 text-center">Aa</span> Rename
@@ -452,7 +498,7 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onDelete 
 
 // ─── Record Row ───────────────────────────────────────────────────────────────
 
-function RecordRow({ record, onAddTransaction, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
+function RecordRow({ record, onAddTransaction, onTransfer, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
   const [editing,   setEditing]   = useState(false)
   const [draft,     setDraft]     = useState(String(record.value))
   const [renaming,  setRenaming]  = useState(false)
@@ -559,6 +605,7 @@ function RecordRow({ record, onAddTransaction, onDelete, onRefresh, draggable, i
       <RecordMenu
         record={record}
         onAddTransaction={onAddTransaction}
+        onTransfer={onTransfer}
         onRename={() => setRenaming(true)}
         onEditValue={() => setEditing(true)}
         onDelete={onDelete}
@@ -747,7 +794,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
               </div>
             )}
           </div>
-          <span className="text-gray-400 text-sm select-none">{open ? '⌃' : '⌄'}</span>
+          <span className={cn('text-gray-400 text-sm select-none leading-none', !open && '-translate-y-[4px]')}>{open ? '⌃' : '⌄'}</span>
         </div>
       </div>
 
@@ -777,6 +824,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
                 key={rec.id}
                 record={rec}
                 onAddTransaction={() => openModal({ type: 'addTransaction', recordId: rec.id, recordLabel: rec.label })}
+                onTransfer={() => openModal({ type: 'transfer', fromPotId: rec.id, fromAccountName: account.name })}
                 onDelete={() => deleteRecord(rec.id)}
                 onRefresh={() => { fetchRecords(); onRefresh() }}
                 draggable={true}
@@ -907,7 +955,7 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
       ) : schedules.length === 0 && !adding ? (
         <p className="text-[13px] text-gray-400 text-center py-4">No scheduled transfers yet.</p>
       ) : !adding ? (
-        <div className="space-y-2 mb-4">
+        <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
           {schedules.map(s => (
             <div key={s.id} className="flex items-start justify-between gap-3 px-3 py-2.5 bg-gray-50 rounded-lg">
               <div className="min-w-0 flex-1">
@@ -945,16 +993,24 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
           {kind === 'transfer' && (
             <Field label="From pot">
               <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
-                {(pots ?? []).map(p => (
-                  <option key={p.id} value={p.id}>{p.accountName} — {p.label} ({fmt(p.value)})</option>
+                {Object.entries(
+                  (pots ?? []).reduce((acc, p) => { (acc[p.accountName] ??= []).push(p); return acc }, {})
+                ).map(([acctName, acctPots]) => (
+                  <optgroup key={acctName} label={acctName}>
+                    {acctPots.map(p => <option key={p.id} value={p.id}>{p.label} ({fmt(p.value)})</option>)}
+                  </optgroup>
                 ))}
               </select>
             </Field>
           )}
           <Field label={kind === 'transfer' ? 'To pot' : 'Target pot'}>
             <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
-              {(pots ?? []).map(p => (
-                <option key={p.id} value={p.id}>{p.accountName} — {p.label} ({fmt(p.value)})</option>
+              {Object.entries(
+                (pots ?? []).reduce((acc, p) => { (acc[p.accountName] ??= []).push(p); return acc }, {})
+              ).map(([acctName, acctPots]) => (
+                <optgroup key={acctName} label={acctName}>
+                  {acctPots.map(p => <option key={p.id} value={p.id}>{p.label} ({fmt(p.value)})</option>)}
+                </optgroup>
               ))}
             </select>
           </Field>
@@ -1164,7 +1220,13 @@ export default function Dashboard() {
         />
       )}
       {modal.type === 'transfer' && (
-        <TransferModal accounts={accounts} onClose={closeModal} onSaved={fetchAccounts} />
+        <TransferModal
+          accounts={accounts}
+          initialFromPotId={modal.fromPotId}
+          initialFromAccountName={modal.fromAccountName}
+          onClose={closeModal}
+          onSaved={fetchAccounts}
+        />
       )}
       {modal.type === 'scheduled' && (
         <ScheduledTransfersModal onClose={closeModal} onSaved={fetchAccounts} />
