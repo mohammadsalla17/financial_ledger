@@ -54,7 +54,8 @@ export const ModelName = {
   Account: 'Account',
   Record: 'Record',
   Transaction: 'Transaction',
-  ScheduledTransfer: 'ScheduledTransfer'
+  ScheduledTransfer: 'ScheduledTransfer',
+  Bill: 'Bill'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -125,6 +126,20 @@ export const ScheduledTransferScalarFieldEnum = {
 } as const
 
 export type ScheduledTransferScalarFieldEnum = (typeof ScheduledTransferScalarFieldEnum)[keyof typeof ScheduledTransferScalarFieldEnum]
+
+
+export const BillScalarFieldEnum = {
+  id: 'id',
+  label: 'label',
+  potId: 'potId',
+  amount: 'amount',
+  frequency: 'frequency',
+  nextRun: 'nextRun',
+  lastRun: 'lastRun',
+  createdAt: 'createdAt'
+} as const
+
+export type BillScalarFieldEnum = (typeof BillScalarFieldEnum)[keyof typeof BillScalarFieldEnum]
 
 
 export const SortOrder = {

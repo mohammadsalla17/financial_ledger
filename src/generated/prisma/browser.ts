@@ -37,3 +37,8 @@ export type Transaction = Prisma.TransactionModel
  * 
  */
 export type ScheduledTransfer = Prisma.ScheduledTransferModel
+/**
+ * Model Bill
+ * 
+ */
+export type Bill = Prisma.BillModel
