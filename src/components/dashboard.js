@@ -30,6 +30,26 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function toCsv(rows) {
+  const esc = (v) => {
+    const s = String(v ?? '')
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  return rows.map(row => row.map(esc).join(',')).join('\n')
+}
+
+function downloadCsv(filename, csv) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 const COLORS = ['#378ADD','#1D9E75','#D85A30','#D4537E','#639922','#BA7517','#7F77DD','#E24B4A']
 
 function cn(...classes) {
@@ -62,7 +82,7 @@ function Spinner() {
 
 // ─── Modal shell ──────────────────────────────────────────────────────────────
 
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, actions, children }) {
   useEffect(() => {
     const fn = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', fn)
@@ -77,7 +97,10 @@ function Modal({ title, onClose, children }) {
       <div className="bg-white rounded-xl border border-gray-200 w-full max-w-sm p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-[15px] font-medium text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none cursor-pointer">✕</button>
+          <div className="flex items-center gap-3">
+            {actions}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none cursor-pointer">✕</button>
+          </div>
         </div>
         {children}
       </div>
@@ -352,7 +375,7 @@ function TransferModal({ onClose, onSaved, initialFromRecordId, initialFromAccou
 
 // ─── Three-dot menu ───────────────────────────────────────────────────────────
 
-function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfer, onDelete }) {
+function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfer, onViewHistory, onDelete }) {
   const [open,    setOpen]    = useState(false)
   const [txns,    setTxns]    = useState(null)
   const [loading, setLoading] = useState(false)
@@ -441,6 +464,12 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfe
                 <span className="text-gray-400 w-4 text-center">✎</span> Edit value
               </button>
             )}
+            {record.kind === 'pot' && (
+              <button onClick={() => { setOpen(false); onViewHistory() }}
+                className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
+                <span className="text-gray-400 w-4 text-center">🕐</span> History
+              </button>
+            )}
             <button onClick={() => { setOpen(false); onDelete() }}
               className="w-full text-left px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2.5 cursor-pointer">
               <span className="w-4 text-center">✕</span> Delete record
@@ -454,7 +483,7 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfe
 
 // ─── Record Row ───────────────────────────────────────────────────────────────
 
-function RecordRow({ record, onAddTransaction, onTransfer, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
+function RecordRow({ record, onAddTransaction, onTransfer, onViewHistory, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
   const [editing,   setEditing]   = useState(false)
   const [draft,     setDraft]     = useState(String(record.value))
   const [renaming,  setRenaming]  = useState(false)
@@ -562,6 +591,7 @@ function RecordRow({ record, onAddTransaction, onTransfer, onDelete, onRefresh, 
         record={record}
         onAddTransaction={onAddTransaction}
         onTransfer={onTransfer}
+        onViewHistory={onViewHistory}
         onRename={() => setRenaming(true)}
         onEditValue={() => setEditing(true)}
         onDelete={onDelete}
@@ -781,6 +811,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
                 record={rec}
                 onAddTransaction={() => openModal({ type: 'addTransaction', recordId: rec.id, recordLabel: rec.label })}
                 onTransfer={() => openModal({ type: 'transfer', fromRecordId: rec.id, fromAccountName: account.name })}
+                onViewHistory={() => openModal({ type: 'potHistory', recordId: rec.id, recordLabel: rec.label, recordValue: rec.value })}
                 onDelete={() => deleteRecord(rec.id)}
                 onRefresh={() => { fetchRecords(); onRefresh() }}
                 draggable={true}
@@ -832,6 +863,66 @@ function RecentTransactionsModal({ onClose }) {
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   {t.accountName} · {t.recordLabel} · {t.txnDate}
                 </p>
+              </div>
+              <span className={`text-[13px] font-medium shrink-0 ${t.amount >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                {fmtSigned(t.amount)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+// ─── Pot History ──────────────────────────────────────────────────────────────
+
+function PotHistoryModal({ recordId, recordLabel, recordValue, onClose }) {
+  const [txns, setTxns] = useState(null)
+
+  useEffect(() => {
+    fetch(`/api/transactions?recordId=${recordId}&limit=200`)
+      .then(r => r.json())
+      .then(data => setTxns(Array.isArray(data) ? data : []))
+      .catch(() => setTxns([]))
+  }, [recordId])
+
+  function handleExport() {
+    if (!txns || txns.length === 0) return
+    const rows = [
+      ['Date', 'Description', 'Amount'],
+      ...txns.map(t => [t.txnDate, t.description, t.amount]),
+    ]
+    const slug = recordLabel.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    downloadCsv(`${slug || 'pot'}-history.csv`, toCsv(rows))
+  }
+
+  return (
+    <Modal
+      title={`${recordLabel} history`}
+      onClose={onClose}
+      actions={
+        <button
+          onClick={handleExport}
+          disabled={!txns || txns.length === 0}
+          title="Export CSV"
+          className="text-gray-400 hover:text-gray-700 text-[15px] leading-none disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+        >⬇</button>
+      }
+    >
+      <div className="flex justify-between items-center pb-3 mb-1 border-b border-gray-100">
+        <span className="text-[12px] text-gray-400">Current balance</span>
+        <span className="text-[14px] font-medium text-gray-800">{fmt(recordValue)}</span>
+      </div>
+      {txns === null ? <Spinner /> : txns.length === 0 ? (
+        <p className="text-[13px] text-gray-400 text-center py-4">No transactions yet.</p>
+      ) : (
+        <div className="space-y-px max-h-96 overflow-y-auto">
+          {txns.map(t => (
+            <div key={t.id} className="flex items-start justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0">
+              <div className="min-w-0">
+                <p className="text-[13px] text-gray-800 truncate">{t.description}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">{fmtDate(t.txnDate)}</p>
               </div>
               <span className={`text-[13px] font-medium shrink-0 ${t.amount >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                 {fmtSigned(t.amount)}
@@ -1384,6 +1475,14 @@ export default function Dashboard() {
       )}
       {modal.type === 'history' && (
         <RecentTransactionsModal onClose={closeModal} />
+      )}
+      {modal.type === 'potHistory' && (
+        <PotHistoryModal
+          recordId={modal.recordId}
+          recordLabel={modal.recordLabel}
+          recordValue={modal.recordValue}
+          onClose={closeModal}
+        />
       )}
     </div>
   )
