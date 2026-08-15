@@ -11,6 +11,10 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Placeholder only, used so `prisma generate`/`next build` can resolve
+# DATABASE_URL at build time. Discarded after this stage — overridden by the
+# real value injected at container runtime (e.g. via Portainer/compose).
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/db?schema=public"
 RUN npx prisma generate
 RUN npm run build
 
