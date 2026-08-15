@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+      - .env.local
+    restart: unless-stopped
+
+  # Uncomment to run Postgres locally instead of pointing DATABASE_URL at an
+  # external server. If enabled, update DATABASE_URL in .env to use
+  # postgresql://postgres:postgres@db:5432/financial_ledger?schema=public
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: financial_ledger
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+# volumes:
+#   pgdata:
