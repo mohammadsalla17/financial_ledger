@@ -8,3 +8,6 @@ npm-debug.log*
 .DS_Store
 *.pem
 coverage
+
+# local dev DB seed data (not for production)
+prisma/seed.sql
