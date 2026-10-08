@@ -247,16 +247,19 @@ function AddRecordModal({ accounts, defaultAccountId, onClose, onSaved }) {
 function AddTransactionModal({ recordId, recordLabel, onClose, onSaved }) {
   const [desc,   setDesc]   = useState('')
   const [amount, setAmount] = useState('')
+  const [type,   setType]   = useState('credit')
   const [date,   setDate]   = useState(new Date().toISOString().split('T')[0])
   const [busy,   setBusy]   = useState(false)
 
   async function submit() {
     if (!desc.trim() || amount === '' || busy) return
+    const abs = Math.abs(parseFloat(amount))
+    if (Number.isNaN(abs)) return
     setBusy(true)
     await fetch('/api/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recordId, description: desc.trim(), amount: parseFloat(amount), txnDate: date }),
+      body: JSON.stringify({ recordId, description: desc.trim(), amount: type === 'debit' ? -abs : abs, txnDate: date }),
     })
     onSaved()
     onClose()
@@ -268,9 +271,19 @@ function AddTransactionModal({ recordId, recordLabel, onClose, onSaved }) {
         <input className={inp} value={desc} onChange={e => setDesc(e.target.value)}
           placeholder="e.g. Groceries – Walmart" autoFocus />
       </Field>
-      <Field label="Amount" hint="Negative = spending / deduction. Positive = payment in / credit.">
-        <input className={inp} type="number" value={amount}
-          onChange={e => setAmount(e.target.value)} placeholder="e.g. -54.20 or 500" />
+      <Field label="Type">
+        <div className="flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
+          {[['credit', 'Credit (+)', 'bg-emerald-600'], ['debit', 'Debit (−)', 'bg-red-500']].map(([v, l, c]) => (
+            <button key={v} type="button" onClick={() => setType(v)}
+              className={`flex-1 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${type === v ? `${c} text-white` : 'text-gray-500 hover:text-gray-800'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Amount" hint={type === 'debit' ? 'Saved as a negative (money out).' : 'Saved as a positive (money in).'}>
+        <input className={inp} type="number" min="0" step="any" value={amount}
+          onChange={e => setAmount(e.target.value)} placeholder="e.g. 54.20" />
       </Field>
       <Field label="Date">
         <input className={inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
