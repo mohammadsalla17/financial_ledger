@@ -964,6 +964,8 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
   const [kind,      setKind]      = useState('income')
   const [fromId,    setFromId]    = useState('')
   const [toId,      setToId]      = useState('')
+  const [fromAccount, setFromAccount] = useState('')
+  const [toAccount,   setToAccount]   = useState('')
   const [amount,    setAmount]    = useState('')
   const [frequency, setFrequency] = useState('monthly')
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
@@ -975,15 +977,22 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
   }, [])
 
   useEffect(() => {
-    fetchSchedules()
-    fetch('/api/records?kind=pot')
-      .then(r => r.json())
-      .then(data => {
-        const list = Array.isArray(data) ? data : []
-        setPots(list)
-        setFromId(list[0]?.id ?? '')
-        setToId(list[1]?.id ?? '')
-      })
+    fetchSchedules() // eslint-disable-line react-hooks/set-state-in-effect
+    Promise.all([
+      fetch('/api/records?kind=pot').then(r => r.json()),
+      fetch('/api/records?kind=expense').then(r => r.json()),
+    ]).then(([potData, expenseData]) => {
+      const list = [
+        ...(Array.isArray(potData) ? potData : []),
+        ...(Array.isArray(expenseData) ? expenseData : []),
+      ]
+      setPots(list)
+      setFromId(list[0]?.id ?? '')
+      setFromAccount(list[0]?.accountName ?? '')
+      const other = list[1] ?? list[0]
+      setToId(other?.id ?? '')
+      setToAccount(other?.accountName ?? '')
+    })
   }, [fetchSchedules])
 
   function startEditing(s) {
@@ -992,6 +1001,9 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
     setKind(s.kind)
     setFromId(s.fromId ?? '')
     setToId(s.toId)
+    const acctOf = id => (pots ?? []).find(p => p.id === id)?.accountName
+    if (s.fromId) setFromAccount(acctOf(s.fromId) ?? fromAccount)
+    setToAccount(acctOf(s.toId) ?? toAccount)
     setAmount(String(s.amount))
     setFrequency(s.frequency)
     setStartDate(s.nextRun)
@@ -1033,6 +1045,7 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
   }
 
   const showForm = adding || editingId !== null
+  const potAccounts = [...new Set((pots ?? []).map(r => r.accountName))]
 
   return (
     <Modal title="Scheduled transfers" onClose={onClose}>
@@ -1075,33 +1088,41 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
           </Field>
           <Field label="Type">
             <select className={sel} value={kind} onChange={e => setKind(e.target.value)}>
-              <option value="income">Income (deposit into pot)</option>
-              <option value="transfer">Transfer (pot → pot)</option>
+              <option value="income">Income (deposit into record)</option>
+              <option value="transfer">Transfer (record → record)</option>
             </select>
           </Field>
           {kind === 'transfer' && (
-            <Field label="From pot">
-              <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
-                {Object.entries(
-                  (pots ?? []).reduce((acc, p) => { (acc[p.accountName] ??= []).push(p); return acc }, {})
-                ).map(([acctName, acctPots]) => (
-                  <optgroup key={acctName} label={acctName}>
-                    {acctPots.map(p => <option key={p.id} value={p.id}>{p.label} ({fmt(p.value)})</option>)}
-                  </optgroup>
-                ))}
+            <Field label="From">
+              <select className={sel} value={fromAccount} onChange={e => {
+                setFromAccount(e.target.value)
+                setFromId((pots ?? []).find(r => r.accountName === e.target.value)?.id ?? '')
+              }}>
+                {potAccounts.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
+              <div className="mt-1.5 ml-3 pl-3 border-l-2 border-gray-200">
+                <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
+                  {(pots ?? []).filter(r => r.accountName === fromAccount).map(r => (
+                    <option key={r.id} value={r.id}>{r.label} ({fmt(r.value)})</option>
+                  ))}
+                </select>
+              </div>
             </Field>
           )}
-          <Field label={kind === 'transfer' ? 'To pot' : 'Target pot'}>
-            <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
-              {Object.entries(
-                (pots ?? []).reduce((acc, p) => { (acc[p.accountName] ??= []).push(p); return acc }, {})
-              ).map(([acctName, acctPots]) => (
-                <optgroup key={acctName} label={acctName}>
-                  {acctPots.map(p => <option key={p.id} value={p.id}>{p.label} ({fmt(p.value)})</option>)}
-                </optgroup>
-              ))}
+          <Field label={kind === 'transfer' ? 'To' : 'Target'}>
+            <select className={sel} value={toAccount} onChange={e => {
+              setToAccount(e.target.value)
+              setToId((pots ?? []).find(r => r.accountName === e.target.value)?.id ?? '')
+            }}>
+              {potAccounts.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
+            <div className="mt-1.5 ml-3 pl-3 border-l-2 border-gray-200">
+              <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
+                {(pots ?? []).filter(r => r.accountName === toAccount).map(r => (
+                  <option key={r.id} value={r.id}>{r.label} ({fmt(r.value)})</option>
+                ))}
+              </select>
+            </div>
           </Field>
           <Field label="Amount">
             <input className={inp} type="number" min="0" value={amount}
