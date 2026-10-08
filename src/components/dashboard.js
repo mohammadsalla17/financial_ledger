@@ -82,7 +82,7 @@ function Spinner() {
 
 // ─── Modal shell ──────────────────────────────────────────────────────────────
 
-function Modal({ title, onClose, actions, children }) {
+function Modal({ title, onClose, actions, toolbar, children }) {
   useEffect(() => {
     const fn = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', fn)
@@ -102,6 +102,7 @@ function Modal({ title, onClose, actions, children }) {
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none cursor-pointer">✕</button>
           </div>
         </div>
+        {toolbar}
         {children}
       </div>
     </div>
@@ -885,7 +886,7 @@ function PotHistoryModal({ recordId, recordLabel, recordValue, onClose }) {
 
 const FREQ_LABELS = { weekly: 'Weekly', biweekly: 'Bi-weekly', monthly: 'Monthly' }
 
-function ScheduledTransfersModal({ onClose, onSaved }) {
+function ScheduledTransfersModal({ onClose, onSaved, toolbar }) {
   const [schedules,  setSchedules]  = useState(null)
   const [pots,       setPots]       = useState(null)
   const [adding,     setAdding]     = useState(false)
@@ -975,7 +976,7 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
   const potAccounts = [...new Set((pots ?? []).map(r => r.accountName))]
 
   return (
-    <Modal title="Scheduled transfers" onClose={onClose}>
+    <Modal title="Scheduled" onClose={onClose} toolbar={toolbar}>
       {/* List */}
       {schedules === null ? (
         <Spinner />
@@ -1081,7 +1082,7 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
 
 // ─── Bills ────────────────────────────────────────────────────────────────────
 
-function BillsModal({ onClose, onSaved }) {
+function BillsModal({ onClose, onSaved, toolbar }) {
   const [bills,      setBills]      = useState(null)
   const [pots,       setPots]       = useState(null)
   const [adding,     setAdding]     = useState(false)
@@ -1162,7 +1163,7 @@ function BillsModal({ onClose, onSaved }) {
   )
 
   return (
-    <Modal title="Bills" onClose={onClose}>
+    <Modal title="Scheduled" onClose={onClose} toolbar={toolbar}>
       {bills === null ? (
         <Spinner />
       ) : bills.length === 0 && !showForm ? (
@@ -1229,6 +1230,27 @@ function BillsModal({ onClose, onSaved }) {
       )}
     </Modal>
   )
+}
+
+// ─── Scheduled (transfers + bills) ────────────────────────────────────────────
+
+function ScheduledModal({ onClose, onSaved, initialTab = 'transfers' }) {
+  const [tab, setTab] = useState(initialTab)
+
+  const toolbar = (
+    <div className="flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 mb-4">
+      {[['transfers', 'Transfers'], ['bills', 'Bills']].map(([v, l]) => (
+        <button key={v} type="button" onClick={() => setTab(v)}
+          className={`flex-1 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${tab === v ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-800'}`}>
+          {l}
+        </button>
+      ))}
+    </div>
+  )
+
+  return tab === 'transfers'
+    ? <ScheduledTransfersModal key="transfers" onClose={onClose} onSaved={onSaved} toolbar={toolbar} />
+    : <BillsModal key="bills" onClose={onClose} onSaved={onSaved} toolbar={toolbar} />
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -1341,10 +1363,6 @@ export default function Dashboard() {
               className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
             >⏱ Scheduled</button>
             <button
-              onClick={() => setModal({ type: 'bills' })}
-              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
-            >🧾 Bills</button>
-            <button
               onClick={() => setModal({ type: 'history' })}
               className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
               title="Recent transactions"
@@ -1420,10 +1438,7 @@ export default function Dashboard() {
         />
       )}
       {modal.type === 'scheduled' && (
-        <ScheduledTransfersModal onClose={closeModal} onSaved={fetchAccounts} />
-      )}
-      {modal.type === 'bills' && (
-        <BillsModal onClose={closeModal} onSaved={fetchAccounts} />
+        <ScheduledModal onClose={closeModal} onSaved={fetchAccounts} />
       )}
       {modal.type === 'history' && (
         <RecentTransactionsModal onClose={closeModal} />
