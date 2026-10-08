@@ -91,12 +91,12 @@ function Modal({ title, onClose, actions, toolbar, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white rounded-xl border border-gray-200 w-full max-w-sm p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[15px] font-medium text-gray-900">{title}</h2>
+          <h2 className="text-[16px] font-semibold text-gray-900">{title}</h2>
           <div className="flex items-center gap-3">
             {actions}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none cursor-pointer">✕</button>
@@ -119,8 +119,8 @@ function Field({ label, hint, children }) {
   )
 }
 
-const inp = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-gray-400'
-const sel = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-gray-400'
+const inp = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition'
+const sel = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition'
 
 function Actions({ onCancel, onSubmit, label = 'Save', disabled }) {
   return (
@@ -129,7 +129,7 @@ function Actions({ onCancel, onSubmit, label = 'Save', disabled }) {
         Cancel
       </button>
       <button onClick={onSubmit} disabled={disabled}
-        className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 cursor-pointer">
+        className="px-4 py-2 text-sm bg-primary text-on-primary font-medium rounded-lg hover:opacity-90 disabled:opacity-50 cursor-pointer">
         {label}
       </button>
     </div>
@@ -165,7 +165,7 @@ function AddAccountModal({ onClose, onSaved }) {
         <div className="flex gap-2 flex-wrap">
           {COLORS.map(c => (
             <button key={c} onClick={() => setColor(c)}
-              className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${color === c ? 'border-gray-900 scale-110' : 'border-transparent'}`}
+              className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${color === c ? 'border-primary scale-110' : 'border-transparent'}`}
               style={{ background: c }} />
           ))}
         </div>
@@ -217,9 +217,9 @@ function AddRecordModal({ accounts, defaultAccountId, onClose, onSaved }) {
 // ─── Transaction (credit / debit / transfer) ──────────────────────────────────
 
 const TXN_TYPES = [
-  ['credit',   'Credit (+)', 'bg-emerald-600'],
-  ['debit',    'Debit (−)',  'bg-red-500'],
-  ['transfer', 'Transfer',   'bg-gray-800'],
+  ['credit',   'Credit (+)', 'bg-emerald-600 text-white'],
+  ['debit',    'Debit (−)',  'bg-red-500 text-white'],
+  ['transfer', 'Transfer',   'bg-gray-300 text-gray-900'],
 ]
 
 function PotPicker({ label, pots, accountName, recordId, onAccount, onRecord }) {
@@ -296,7 +296,7 @@ function TransactionModal({ onClose, onSaved, initialRecordId, initialType = 'cr
         <div className="flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
           {TXN_TYPES.map(([v, l, c]) => (
             <button key={v} type="button" onClick={() => setType(v)}
-              className={`flex-1 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${type === v ? `${c} text-white` : 'text-gray-500 hover:text-gray-800'}`}>
+              className={`flex-1 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${type === v ? c : 'text-gray-500 hover:text-gray-800'}`}>
               {l}
             </button>
           ))}
@@ -375,9 +375,10 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onViewHis
               <p className="text-[13px] text-gray-400 py-1">No transactions yet.</p>
             )}
             {!loading && txns?.length > 0 && (
-              <div className="space-y-2.5">
+              <div>
+                <div className="rounded-lg border border-gray-100 overflow-hidden mb-2">
                 {txns.map(t => (
-                  <div key={t.id} className="flex items-start justify-between gap-2">
+                  <div key={t.id} className="flex items-start justify-between gap-2 px-2.5 py-2 odd:bg-gray-50 even:bg-white">
                     <div className="min-w-0">
                       <p className="text-[13px] text-gray-800 truncate">{t.description}</p>
                       <p className="text-[11px] text-gray-400">{fmtDate(t.txnDate)}</p>
@@ -387,6 +388,7 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onViewHis
                     </span>
                   </div>
                 ))}
+                </div>
                 {record.kind === 'pot' && (
                   <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                     <span className="text-[12px] text-gray-400">Running total</span>
@@ -398,7 +400,7 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onViewHis
           </div>
 
           {/* Actions */}
-          <div className="py-1">
+          <div className="py-1 divide-y divide-gray-100">
             <button onClick={() => { setOpen(false); onAddTransaction() }}
               className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
               <span className="text-gray-400 w-4 text-center">+</span> Add transaction
@@ -668,7 +670,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
 
   return (
     <div
-      className={cn('bg-white border border-gray-200 rounded-xl overflow-visible', isDragging && 'opacity-40')}
+      className={cn('card-lift bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible', isDragging && 'opacity-40')}
       style={dropShadow}
       draggable={draggable}
       onDragStart={(e) => onDragStart?.(e, account)}
@@ -679,7 +681,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
 
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 py-3.5 cursor-grab hover:bg-gray-50 rounded-xl transition-colors select-none"
+        className="flex items-center justify-between px-3 py-3.5 cursor-grab hover:bg-gray-50 rounded-2xl transition-colors select-none"
         onClick={() => setOpen(v => {
           const next = !v
           try { localStorage.setItem(`acct-open:${account.id}`, String(next)) } catch {}
@@ -688,7 +690,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
       >
         <div className="flex items-center gap-2">
           <span className="text-gray-300 px-1 text-[15px] leading-none shrink-0">⠿</span>
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: account.color }} />
+          <span className="w-3 h-3 rounded-full shrink-0 ring-4" style={{ background: account.color, '--tw-ring-color': `${account.color}33` }} />
           {renamingAccount ? (
             <input
               ref={accountNameRef}
@@ -704,7 +706,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[17px] font-medium text-gray-900">{fmt(account.balance)}</span>
+          <span className="text-[17px] font-semibold text-gray-900 tabular-nums">{fmt(account.balance)}</span>
           <div className="relative" ref={menuRef}>
             <button
               onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
@@ -712,11 +714,11 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
               title="Account options"
             >⋯</button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 divide-y divide-gray-100">
                 <button
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); onAddRecord() }}
                   className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 cursor-pointer"
-                >+ Add record</button>
+                >Add record</button>
                 <button
                   onClick={e => { e.stopPropagation(); setMenuOpen(false); setDraftAccountName(account.name); setRenamingAccount(true) }}
                   className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 cursor-pointer"
@@ -774,7 +776,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
           })}
 
           {!loading && records?.length > 0 && (
-            <div className="flex justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+            <div className="flex justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
               <span className="text-[13px] text-gray-500">Account total</span>
               <span className="text-[14px] font-medium text-gray-800">{fmt(total)}</span>
             </div>
@@ -802,9 +804,9 @@ function RecentTransactionsModal({ onClose }) {
       {txns === null ? <Spinner /> : txns.length === 0 ? (
         <p className="text-[13px] text-gray-400 text-center py-4">No transactions yet.</p>
       ) : (
-        <div className="space-y-px max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto rounded-lg border border-gray-100">
           {txns.map(t => (
-            <div key={t.id} className="flex items-start justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0">
+            <div key={t.id} className="flex items-start justify-between gap-3 px-3 py-2.5 odd:bg-gray-50 even:bg-white">
               <div className="min-w-0">
                 <p className="text-[13px] text-gray-800 truncate">{t.description}</p>
                 <p className="text-[11px] text-gray-400 mt-0.5">
@@ -864,9 +866,9 @@ function PotHistoryModal({ recordId, recordLabel, recordValue, onClose }) {
       {txns === null ? <Spinner /> : txns.length === 0 ? (
         <p className="text-[13px] text-gray-400 text-center py-4">No transactions yet.</p>
       ) : (
-        <div className="space-y-px max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto rounded-lg border border-gray-100">
           {txns.map(t => (
-            <div key={t.id} className="flex items-start justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0">
+            <div key={t.id} className="flex items-start justify-between gap-3 px-3 py-2.5 odd:bg-gray-50 even:bg-white">
               <div className="min-w-0">
                 <p className="text-[13px] text-gray-800 truncate">{t.description}</p>
                 <p className="text-[11px] text-gray-400 mt-0.5">{fmtDate(t.txnDate)}</p>
@@ -886,10 +888,10 @@ function PotHistoryModal({ recordId, recordLabel, recordValue, onClose }) {
 
 const FREQ_LABELS = { weekly: 'Weekly', biweekly: 'Bi-weekly', monthly: 'Monthly' }
 
-function ScheduledTransfersModal({ onClose, onSaved, toolbar }) {
+function ScheduledTransfersModal({ onClose, onSaved, toolbar, formOpen = false, onFormChange }) {
   const [schedules,  setSchedules]  = useState(null)
   const [pots,       setPots]       = useState(null)
-  const [adding,     setAdding]     = useState(false)
+  const [adding,     setAdding]     = useState(formOpen)
   const [editingId,  setEditingId]  = useState(null)
   const [busy,       setBusy]       = useState(false)
 
@@ -924,6 +926,7 @@ function ScheduledTransfersModal({ onClose, onSaved, toolbar }) {
   }, [fetchSchedules])
 
   function startEditing(s) {
+    onFormChange?.(true)
     setEditingId(s.id)
     setLabel(s.label)
     setKind(s.kind)
@@ -938,6 +941,7 @@ function ScheduledTransfersModal({ onClose, onSaved, toolbar }) {
   }
 
   function cancelForm() {
+    onFormChange?.(false)
     setAdding(false)
     setEditingId(null)
     setLabel('')
@@ -1071,7 +1075,7 @@ function ScheduledTransfersModal({ onClose, onSaved, toolbar }) {
             disabled={busy || !label.trim() || !toId || !amount} />
         </div>
       ) : (
-        <button onClick={() => setAdding(true)}
+        <button onClick={() => { setAdding(true); onFormChange?.(true) }}
           className="w-full py-2 text-[13px] border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors cursor-pointer">
           + New scheduled transfer
         </button>
@@ -1082,15 +1086,16 @@ function ScheduledTransfersModal({ onClose, onSaved, toolbar }) {
 
 // ─── Bills ────────────────────────────────────────────────────────────────────
 
-function BillsModal({ onClose, onSaved, toolbar }) {
+function BillsModal({ onClose, onSaved, toolbar, formOpen = false, onFormChange }) {
   const [bills,      setBills]      = useState(null)
   const [pots,       setPots]       = useState(null)
-  const [adding,     setAdding]     = useState(false)
+  const [adding,     setAdding]     = useState(formOpen)
   const [editingId,  setEditingId]  = useState(null)
   const [busy,       setBusy]       = useState(false)
 
   const [label,     setLabel]     = useState('')
   const [potId,     setPotId]     = useState('')
+  const [potAccount, setPotAccount] = useState('')
   const [amount,    setAmount]    = useState('')
   const [frequency, setFrequency] = useState('monthly')
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
@@ -1102,26 +1107,30 @@ function BillsModal({ onClose, onSaved, toolbar }) {
   }, [])
 
   useEffect(() => {
-    fetchBills()
+    fetchBills() // eslint-disable-line react-hooks/set-state-in-effect
     fetch('/api/records?kind=pot')
       .then(r => r.json())
       .then(data => {
         const list = Array.isArray(data) ? data : []
         setPots(list)
         setPotId(list[0]?.id ?? '')
+        setPotAccount(list[0]?.accountName ?? '')
       })
   }, [fetchBills])
 
   function startEditing(b) {
+    onFormChange?.(true)
     setEditingId(b.id)
     setLabel(b.label)
     setPotId(b.potId)
+    setPotAccount((pots ?? []).find(p => p.id === b.potId)?.accountName ?? potAccount)
     setAmount(String(b.amount))
     setFrequency(b.frequency)
     setStartDate(b.nextRun)
   }
 
   function cancelForm() {
+    onFormChange?.(false)
     setAdding(false)
     setEditingId(null)
     setLabel('')
@@ -1158,10 +1167,6 @@ function BillsModal({ onClose, onSaved, toolbar }) {
 
   const showForm = adding || editingId !== null
 
-  const potsByAccount = Object.entries(
-    (pots ?? []).reduce((acc, p) => { (acc[p.accountName] ??= []).push(p); return acc }, {})
-  )
-
   return (
     <Modal title="Scheduled" onClose={onClose} toolbar={toolbar}>
       {bills === null ? (
@@ -1195,15 +1200,8 @@ function BillsModal({ onClose, onSaved, toolbar }) {
             <input className={inp} value={label} onChange={e => setLabel(e.target.value)}
               placeholder="e.g. Netflix, Rent" autoFocus />
           </Field>
-          <Field label="Deduct from pot">
-            <select className={sel} value={potId} onChange={e => setPotId(e.target.value)}>
-              {potsByAccount.map(([acctName, acctPots]) => (
-                <optgroup key={acctName} label={acctName}>
-                  {acctPots.map(p => <option key={p.id} value={p.id}>{p.label} ({fmt(p.value)})</option>)}
-                </optgroup>
-              ))}
-            </select>
-          </Field>
+          <PotPicker label="Deduct from" pots={pots ?? []}
+            accountName={potAccount} recordId={potId} onAccount={setPotAccount} onRecord={setPotId} />
           <Field label="Amount">
             <input className={inp} type="number" min="0" value={amount}
               onChange={e => setAmount(e.target.value)} placeholder="0.00" />
@@ -1223,7 +1221,7 @@ function BillsModal({ onClose, onSaved, toolbar }) {
             disabled={busy || !label.trim() || !potId || !amount} />
         </div>
       ) : (
-        <button onClick={() => setAdding(true)}
+        <button onClick={() => { setAdding(true); onFormChange?.(true) }}
           className="w-full py-2 text-[13px] border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors cursor-pointer">
           + New bill
         </button>
@@ -1232,16 +1230,34 @@ function BillsModal({ onClose, onSaved, toolbar }) {
   )
 }
 
+// ─── Theme picker ─────────────────────────────────────────────────────────────
+
+function ThemePicker() {
+  function toggle() {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+    document.documentElement.setAttribute('data-theme', next)
+    try { localStorage.setItem('theme', next) } catch {}
+  }
+  return (
+    <button type="button" onClick={toggle} title="Toggle dark mode" aria-label="Toggle dark mode"
+      className="theme-toggle w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-primary cursor-pointer transition-colors">
+      <span className="icon-moon">🌙</span>
+      <span className="icon-sun">☀️</span>
+    </button>
+  )
+}
+
 // ─── Scheduled (transfers + bills) ────────────────────────────────────────────
 
 function ScheduledModal({ onClose, onSaved, initialTab = 'transfers' }) {
   const [tab, setTab] = useState(initialTab)
+  const [formOpen, setFormOpen] = useState(false)
 
   const toolbar = (
     <div className="flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 mb-4">
       {[['transfers', 'Transfers'], ['bills', 'Bills']].map(([v, l]) => (
         <button key={v} type="button" onClick={() => setTab(v)}
-          className={`flex-1 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${tab === v ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-800'}`}>
+          className={`flex-1 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${tab === v ? 'bg-primary text-on-primary' : 'text-gray-500 hover:text-gray-800'}`}>
           {l}
         </button>
       ))}
@@ -1249,8 +1265,8 @@ function ScheduledModal({ onClose, onSaved, initialTab = 'transfers' }) {
   )
 
   return tab === 'transfers'
-    ? <ScheduledTransfersModal key="transfers" onClose={onClose} onSaved={onSaved} toolbar={toolbar} />
-    : <BillsModal key="bills" onClose={onClose} onSaved={onSaved} toolbar={toolbar} />
+    ? <ScheduledTransfersModal key="transfers" onClose={onClose} onSaved={onSaved} toolbar={toolbar} formOpen={formOpen} onFormChange={setFormOpen} />
+    : <BillsModal key="bills" onClose={onClose} onSaved={onSaved} toolbar={toolbar} formOpen={formOpen} onFormChange={setFormOpen} />
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -1336,45 +1352,48 @@ export default function Dashboard() {
   const closeModal = () => setModal({ type: null })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="app-bg">
       <div className="max-w-3xl mx-auto px-4 py-10">
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-[20px] font-medium text-gray-900">Financial Ledger</h1>
-            {!loading && (
-              <p className="text-[13px] text-gray-500 mt-0.5">
-                Net worth: <span className="font-medium text-gray-800">{fmt(netWorth)}</span>
-              </p>
-            )}
+        <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <div className="hero-card w-9 h-9 rounded-xl flex items-center justify-center text-[13px] font-bold tracking-tight">FL</div>
+            <h1 className="text-[18px] font-semibold text-gray-900">Financial Ledger</h1>
           </div>
-          <div className="flex gap-2 flex-wrap justify-end">
-            <button
-              onClick={() => setModal({ type: 'addAccount' })}
-              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
-            >+ Account</button>
-            <button
-              onClick={() => setModal({ type: 'transaction' })}
-              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
-            >+ Transaction</button>
-            <button
-              onClick={() => setModal({ type: 'scheduled' })}
-              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
-            >⏱ Scheduled</button>
-            <button
-              onClick={() => setModal({ type: 'history' })}
-              className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
-              title="Recent transactions"
-            >🕐 History</button>
+          <div className="flex items-center gap-3">
+            <ThemePicker />
             <form action={logout}>
-              <button
-                type="submit"
-                className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-500 cursor-pointer"
-                title="Sign out"
+              <button type="submit" title="Sign out"
+                className="px-3 py-1.5 text-[13px] rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 cursor-pointer transition-colors"
               >Sign out</button>
             </form>
           </div>
+        </div>
+
+        {/* Net worth hero */}
+        <div className="hero-card rounded-2xl p-6 mb-5">
+          <p className="text-[12px] uppercase tracking-widest opacity-80">Net worth</p>
+          <p className="text-[34px] font-semibold tabular-nums leading-tight mt-1">
+            {loading ? '—' : fmt(netWorth)}
+          </p>
+          <p className="text-[12px] opacity-75 mt-1">
+            {loading ? '' : `${accounts.length} account${accounts.length !== 1 ? 's' : ''}`}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 flex-wrap mb-6">
+          {[
+            ['addAccount',  'Add Account',     undefined],
+            ['transaction', 'Add Transaction', undefined],
+            ['scheduled',   'Scheduled',       undefined],
+            ['history',     'History',          'Recent transactions'],
+          ].map(([type, label, title]) => (
+            <button key={type} onClick={() => setModal({ type })} title={title}
+              className="px-4 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-700 hover:border-primary hover:text-primary shadow-sm cursor-pointer transition-colors"
+            >{label}</button>
+          ))}
         </div>
 
         {/* Accounts */}

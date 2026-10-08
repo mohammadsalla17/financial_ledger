@@ -6,10 +6,11 @@ export default function LoginPage() {
   const [state, action, pending] = useActionState(login, undefined)
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white rounded-xl border border-gray-200 p-8 w-full max-w-sm shadow-sm">
-        <h1 className="text-[18px] font-semibold text-gray-900 mb-1">Financial Ledger</h1>
-        <p className="text-[13px] text-gray-400 mb-6">Enter your password to continue.</p>
+    <div className="app-bg grid place-items-center p-4">
+      <div className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-sm shadow-xl">
+        <div className="hero-card w-11 h-11 rounded-xl flex items-center justify-center text-[16px] font-bold tracking-tight mb-4 mx-auto">FL</div>
+        <h1 className="text-[20px] font-semibold text-gray-900 mb-1 text-center">Financial Ledger</h1>
+        <p className="text-[13px] text-gray-400 mb-6 text-center">Enter your password to continue.</p>
 
         <form action={action} className="space-y-4">
           <div>
@@ -23,7 +24,7 @@ export default function LoginPage() {
               autoComplete="username"
               autoFocus
               required
-              className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg outline-none focus:border-gray-400 transition-colors"
+              className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-white text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
               placeholder="admin"
             />
           </div>
@@ -37,7 +38,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg outline-none focus:border-gray-400 transition-colors"
+              className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-white text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
               placeholder="••••••••"
             />
           </div>
@@ -49,7 +50,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full py-2 text-[13px] font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 cursor-pointer transition-colors"
+            className="w-full py-2 text-[13px] font-medium bg-primary text-on-primary rounded-lg hover:opacity-90 disabled:opacity-50 cursor-pointer transition-colors"
           >
             {pending ? 'Signing in…' : 'Sign in'}
           </button>

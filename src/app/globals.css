@@ -1,5 +1,67 @@
 @import "tailwindcss";
 
+/* ── App themes ──────────────────────────────────────────────────────────────────
+   The UI uses Tailwind's gray scale + white as its neutral palette. Those colours are
+   re-pointed at CSS variables here, so switching [data-theme] re-skins everything.   */
+@theme {
+  --color-white:     var(--c-surface);
+  --color-gray-50:   var(--c-50);
+  --color-gray-100:  var(--c-100);
+  --color-gray-200:  var(--c-200);
+  --color-gray-300:  var(--c-300);
+  --color-gray-400:  var(--c-400);
+  --color-gray-500:  var(--c-500);
+  --color-gray-600:  var(--c-600);
+  --color-gray-700:  var(--c-700);
+  --color-gray-800:  var(--c-800);
+  --color-gray-900:  var(--c-900);
+  --color-primary:   var(--c-primary);
+  --color-on-primary: var(--c-on-primary);
+  --color-primary-soft: var(--c-primary-soft);
+}
+
+/* Forest (default, light green) */
+:root, :root[data-theme="light"] {
+  --c-surface: #ffffff;
+  --c-50: #f3f8f4; --c-100: #e6f0e8; --c-200: #d0e1d5; --c-300: #b0cbb7; --c-400: #7fa088;
+  --c-500: #5c7d66; --c-600: #44634d; --c-700: #324d3b; --c-800: #213a2a; --c-900: #12261b;
+  --c-primary: #15803d; --c-on-primary: #ffffff; --c-primary-soft: #dcfce7;
+  --hero-from: #166534; --hero-to: #0d9488;
+  color-scheme: light;
+}
+/* Dark green */
+:root[data-theme="dark"] {
+  --c-surface: #15221b;
+  --c-50: #0b130f; --c-100: #1b2a22; --c-200: #28392f; --c-300: #3a5043; --c-400: #7fa38d;
+  --c-500: #9bbaa8; --c-600: #b5cfc0; --c-700: #cfe2d6; --c-800: #e4f0e8; --c-900: #f3faf5;
+  --c-primary: #4ade80; --c-on-primary: #08120c; --c-primary-soft: #1c3326;
+  --hero-from: #14532d; --hero-to: #0f766e;
+  color-scheme: dark;
+}
+
+body { transition: background-color 0.2s, color 0.2s; }
+
+.app-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 400px at 10% -10%, color-mix(in srgb, var(--c-primary) 10%, transparent), transparent 70%),
+    radial-gradient(700px 360px at 100% 0%, color-mix(in srgb, var(--hero-to) 8%, transparent), transparent 70%),
+    var(--c-50);
+}
+
+.hero-card {
+  background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
+  color: #fff;
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--hero-from) 60%, transparent);
+}
+
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun  { display: inline; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+.card-lift { transition: box-shadow 0.2s, transform 0.2s; }
+.card-lift:hover { box-shadow: 0 8px 24px -12px color-mix(in srgb, var(--c-900) 25%, transparent); }
+
 /* ── Font variables (wired to next/font injected CSS vars) ───────────────────── */
 :root {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -274,3 +336,15 @@ body {
 
 .animate-fade-in  { animation: fade-in  0.18s ease both; }
 .animate-scale-in { animation: scale-in 0.15s ease both; }
+
+/* ── Select dropdowns: custom chevron with breathing room from the right edge ── */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%237f9a88' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
