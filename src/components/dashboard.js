@@ -176,104 +176,124 @@ function AddAccountModal({ onClose, onSaved }) {
 
 // ─── Add Record ───────────────────────────────────────────────────────────────
 
-const KIND_HINT = {
-  income:  'Fixed amount coming in each period (e.g. salary).',
-  expense: 'Fixed amount going out each period (e.g. rent).',
-  pot:     'Running bucket — value is the live sum of its transactions (e.g. credit card).',
-}
-
 function AddRecordModal({ accounts, defaultAccountId, onClose, onSaved }) {
   const [accountId, setAccountId] = useState(defaultAccountId || accounts[0]?.id || '')
   const [label,     setLabel]     = useState('')
-  const [kind,      setKind]      = useState('expense')
-  const [amount,    setAmount]    = useState('')
   const [note,      setNote]      = useState('')
   const [busy,      setBusy]      = useState(false)
 
   async function submit() {
     if (!label.trim() || busy) return
-    if (kind !== 'pot' && amount === '') return
     setBusy(true)
     await fetch('/api/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        accountId,
-        label: label.trim(),
-        kind,
-        fixedAmount: kind !== 'pot' ? parseFloat(amount) : undefined,
-        note: note.trim(),
-      }),
+      body: JSON.stringify({ accountId, label: label.trim(), kind: 'pot', note: note.trim() }),
     })
     onSaved()
     onClose()
   }
 
   return (
-    <Modal title="Add record" onClose={onClose}>
+    <Modal title="Add pot" onClose={onClose}>
       <Field label="Account">
         <select className={sel} value={accountId} onChange={e => setAccountId(e.target.value)}>
           {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </Field>
-      <Field label="Label">
+      <Field label="Label" hint="A running bucket — its value is the live sum of its transactions.">
         <input className={inp} value={label} onChange={e => setLabel(e.target.value)}
           placeholder="e.g. Credit Card" autoFocus />
       </Field>
-      <Field label="Type">
-        <select className={sel} value={kind} onChange={e => setKind(e.target.value)}>
-          <option value="expense">Expense</option>
-          <option value="income">Income</option>
-          <option value="pot">Pot (running total)</option>
-        </select>
-        <p className="text-[11px] text-gray-400 mt-1.5">{KIND_HINT[kind]}</p>
-      </Field>
-      {kind !== 'pot' && (
-        <Field label="Amount" hint="Positive = money in. Negative = money out.">
-          <input className={inp} type="number" value={amount}
-            onChange={e => setAmount(e.target.value)} placeholder="e.g. -1200 or 3500" />
-        </Field>
-      )}
       <Field label="Note (optional)">
         <input className={inp} value={note} onChange={e => setNote(e.target.value)} />
       </Field>
-      <Actions onCancel={onClose} onSubmit={submit} label={busy ? 'Adding…' : 'Add record'} disabled={busy} />
+      <Actions onCancel={onClose} onSubmit={submit} label={busy ? 'Adding…' : 'Add pot'} disabled={busy} />
     </Modal>
   )
 }
 
-// ─── Add Transaction ──────────────────────────────────────────────────────────
+// ─── Transaction (credit / debit / transfer) ──────────────────────────────────
 
-function AddTransactionModal({ recordId, recordLabel, onClose, onSaved }) {
-  const [desc,   setDesc]   = useState('')
-  const [amount, setAmount] = useState('')
-  const [type,   setType]   = useState('credit')
-  const [date,   setDate]   = useState(new Date().toISOString().split('T')[0])
-  const [busy,   setBusy]   = useState(false)
+const TXN_TYPES = [
+  ['credit',   'Credit (+)', 'bg-emerald-600'],
+  ['debit',    'Debit (−)',  'bg-red-500'],
+  ['transfer', 'Transfer',   'bg-gray-800'],
+]
+
+function PotPicker({ label, pots, accountName, recordId, onAccount, onRecord }) {
+  const accounts = [...new Set(pots.map(r => r.accountName))]
+  return (
+    <Field label={label}>
+      <select className={sel} value={accountName} onChange={e => {
+        onAccount(e.target.value)
+        onRecord(pots.find(r => r.accountName === e.target.value)?.id ?? '')
+      }}>
+        {accounts.map(a => <option key={a} value={a}>{a}</option>)}
+      </select>
+      <div className="mt-1.5 ml-3 pl-3 border-l-2 border-gray-200">
+        <select className={sel} value={recordId} onChange={e => onRecord(e.target.value)}>
+          {pots.filter(r => r.accountName === accountName).map(r => (
+            <option key={r.id} value={r.id}>{r.label} ({fmt(r.value)})</option>
+          ))}
+        </select>
+      </div>
+    </Field>
+  )
+}
+
+function TransactionModal({ onClose, onSaved, initialRecordId, initialType = 'credit' }) {
+  const [pots,        setPots]        = useState(null)
+  const [type,        setType]        = useState(initialType)
+  const [fromId,      setFromId]      = useState(initialRecordId ?? '')
+  const [toId,        setToId]        = useState('')
+  const [fromAccount, setFromAccount] = useState('')
+  const [toAccount,   setToAccount]   = useState('')
+  const [amount,      setAmount]      = useState('')
+  const [desc,        setDesc]        = useState('')
+  const [date,        setDate]        = useState(new Date().toISOString().split('T')[0])
+  const [busy,        setBusy]        = useState(false)
+
+  useEffect(() => {
+    fetch('/api/records?kind=pot')
+      .then(r => r.json())
+      .then(data => {
+        const list  = Array.isArray(data) ? data : []
+        const first = list.find(p => p.id === initialRecordId) ?? list[0]
+        const other = list.find(p => p.id !== first?.id) ?? first
+        setPots(list)
+        setFromId(first?.id ?? '')
+        setFromAccount(first?.accountName ?? '')
+        setToId(other?.id ?? '')
+        setToAccount(other?.accountName ?? '')
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isTransfer = type === 'transfer'
+  const abs        = Math.abs(parseFloat(amount))
+  const invalid    = busy || !fromId || Number.isNaN(abs) || abs === 0 ||
+                     (isTransfer ? !toId || fromId === toId : !desc.trim())
 
   async function submit() {
-    if (!desc.trim() || amount === '' || busy) return
-    const abs = Math.abs(parseFloat(amount))
-    if (Number.isNaN(abs)) return
+    if (invalid) return
     setBusy(true)
+    const body = isTransfer
+      ? { type: 'transfer', fromRecordId: fromId, toRecordId: toId, amount: abs, description: desc.trim() || undefined, txnDate: date }
+      : { recordId: fromId, description: desc.trim(), amount: type === 'debit' ? -abs : abs, txnDate: date }
     await fetch('/api/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recordId, description: desc.trim(), amount: type === 'debit' ? -abs : abs, txnDate: date }),
+      body: JSON.stringify(body),
     })
     onSaved()
     onClose()
   }
 
   return (
-    <Modal title={`Add transaction — ${recordLabel}`} onClose={onClose}>
-      <Field label="Description">
-        <input className={inp} value={desc} onChange={e => setDesc(e.target.value)}
-          placeholder="e.g. Groceries – Walmart" autoFocus />
-      </Field>
+    <Modal title="Add transaction" onClose={onClose}>
       <Field label="Type">
         <div className="flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
-          {[['credit', 'Credit (+)', 'bg-emerald-600'], ['debit', 'Debit (−)', 'bg-red-500']].map(([v, l, c]) => (
+          {TXN_TYPES.map(([v, l, c]) => (
             <button key={v} type="button" onClick={() => setType(v)}
               className={`flex-1 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${type === v ? `${c} text-white` : 'text-gray-500 hover:text-gray-800'}`}>
               {l}
@@ -281,114 +301,35 @@ function AddTransactionModal({ recordId, recordLabel, onClose, onSaved }) {
           ))}
         </div>
       </Field>
-      <Field label="Amount" hint={type === 'debit' ? 'Saved as a negative (money out).' : 'Saved as a positive (money in).'}>
+      {pots === null ? <Spinner /> : (
+        <>
+          <PotPicker label={isTransfer ? 'From' : 'Pot'} pots={pots}
+            accountName={fromAccount} recordId={fromId} onAccount={setFromAccount} onRecord={setFromId} />
+          {isTransfer && (
+            <PotPicker label="To" pots={pots}
+              accountName={toAccount} recordId={toId} onAccount={setToAccount} onRecord={setToId} />
+          )}
+        </>
+      )}
+      <Field label="Amount" hint={type === 'debit' ? 'Saved as a negative (money out).' : type === 'credit' ? 'Saved as a positive (money in).' : undefined}>
         <input className={inp} type="number" min="0" step="any" value={amount}
-          onChange={e => setAmount(e.target.value)} placeholder="e.g. 54.20" />
+          onChange={e => setAmount(e.target.value)} placeholder="0.00" autoFocus />
+      </Field>
+      <Field label={isTransfer ? 'Description (optional)' : 'Description'}>
+        <input className={inp} value={desc} onChange={e => setDesc(e.target.value)}
+          placeholder={isTransfer ? '' : 'e.g. Groceries – Walmart'} />
       </Field>
       <Field label="Date">
         <input className={inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
       </Field>
-      <Actions onCancel={onClose} onSubmit={submit} label={busy ? 'Adding…' : 'Add'} disabled={busy} />
-    </Modal>
-  )
-}
-
-// ─── Transfer ─────────────────────────────────────────────────────────────────
-
-function TransferModal({ onClose, onSaved, initialFromRecordId, initialFromAccountName }) {
-  const [fromId,      setFromId]      = useState(initialFromRecordId ?? '')
-  const [toId,        setToId]        = useState('')
-  const [fromAccount, setFromAccount] = useState(initialFromAccountName ?? '')
-  const [toAccount,   setToAccount]   = useState('')
-  const [records,     setRecords]     = useState(null)
-  const [amount,      setAmount]      = useState('')
-  const [desc,        setDesc]        = useState('')
-  const [busy,        setBusy]        = useState(false)
-
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/records?kind=pot').then(r => r.json()),
-      fetch('/api/records?kind=expense').then(r => r.json()),
-    ]).then(([potData, expenseData]) => {
-      const all = [...potData, ...expenseData]
-      setRecords(all)
-      if (!initialFromRecordId) {
-        setFromAccount(all[0]?.accountName ?? '')
-        setFromId(all[0]?.id ?? '')
-      }
-      const firstOther = all.find(p => p.id !== (initialFromRecordId ?? all[0]?.id))
-      setToAccount(firstOther?.accountName ?? all[0]?.accountName ?? '')
-      setToId(firstOther?.id ?? '')
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function submit() {
-    if (!amount || fromId === toId || busy) return
-    setBusy(true)
-    await fetch('/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'transfer',
-        fromRecordId: fromId,
-        toRecordId: toId,
-        amount: Math.abs(parseFloat(amount)),
-        description: desc.trim() || undefined,
-      }),
-    })
-    onSaved()
-    onClose()
-  }
-
-  const recordAccounts = [...new Set((records ?? []).map(r => r.accountName))]
-
-  return (
-    <Modal title="Transfer" onClose={onClose}>
-      <Field label="From">
-        <select className={sel} value={fromAccount} onChange={e => {
-          setFromAccount(e.target.value)
-          setFromId((records ?? []).find(r => r.accountName === e.target.value)?.id ?? '')
-        }}>
-          {recordAccounts.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-        <div className="mt-1.5 ml-3 pl-3 border-l-2 border-gray-200">
-          <select className={sel} value={fromId} onChange={e => setFromId(e.target.value)}>
-            {(records ?? []).filter(r => r.accountName === fromAccount).map(r => (
-              <option key={r.id} value={r.id}>{r.label} ({fmt(r.value)})</option>
-            ))}
-          </select>
-        </div>
-      </Field>
-      <Field label="To">
-        <select className={sel} value={toAccount} onChange={e => {
-          setToAccount(e.target.value)
-          setToId((records ?? []).find(r => r.accountName === e.target.value)?.id ?? '')
-        }}>
-          {recordAccounts.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-        <div className="mt-1.5 ml-3 pl-3 border-l-2 border-gray-200">
-          <select className={sel} value={toId} onChange={e => setToId(e.target.value)}>
-            {(records ?? []).filter(r => r.accountName === toAccount).map(r => (
-              <option key={r.id} value={r.id}>{r.label} ({fmt(r.value)})</option>
-            ))}
-          </select>
-        </div>
-      </Field>
-      <Field label="Amount">
-        <input className={inp} type="number" min="0" value={amount}
-          onChange={e => setAmount(e.target.value)} placeholder="0.00" autoFocus />
-      </Field>
-      <Field label="Description (optional)">
-        <input className={inp} value={desc} onChange={e => setDesc(e.target.value)} />
-      </Field>
-      <Actions onCancel={onClose} onSubmit={submit} label={busy ? 'Transferring…' : 'Transfer'} disabled={busy || fromId === toId || !amount} />
+      <Actions onCancel={onClose} onSubmit={submit} label={busy ? 'Saving…' : 'Add'} disabled={invalid} />
     </Modal>
   )
 }
 
 // ─── Three-dot menu ───────────────────────────────────────────────────────────
 
-function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfer, onViewHistory, onDelete }) {
+function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onViewHistory, onDelete }) {
   const [open,    setOpen]    = useState(false)
   const [txns,    setTxns]    = useState(null)
   const [loading, setLoading] = useState(false)
@@ -461,12 +402,6 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfe
               className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
               <span className="text-gray-400 w-4 text-center">+</span> Add transaction
             </button>
-            {(record.kind === 'pot' || record.kind === 'expense') && (
-              <button onClick={() => { setOpen(false); onTransfer() }}
-                className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
-                <span className="text-gray-400 w-4 text-center">⇆</span> Transfer
-              </button>
-            )}
             <button onClick={() => { setOpen(false); onRename() }}
               className="w-full text-left px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 cursor-pointer">
               <span className="text-gray-400 w-4 text-center">Aa</span> Rename
@@ -496,7 +431,7 @@ function RecordMenu({ record, onAddTransaction, onEditValue, onRename, onTransfe
 
 // ─── Record Row ───────────────────────────────────────────────────────────────
 
-function RecordRow({ record, onAddTransaction, onTransfer, onViewHistory, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
+function RecordRow({ record, onAddTransaction, onViewHistory, onDelete, onRefresh, draggable, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, showDropAbove, showDropBelow }) {
   const [editing,   setEditing]   = useState(false)
   const [draft,     setDraft]     = useState(String(record.value))
   const [renaming,  setRenaming]  = useState(false)
@@ -603,7 +538,6 @@ function RecordRow({ record, onAddTransaction, onTransfer, onViewHistory, onDele
       <RecordMenu
         record={record}
         onAddTransaction={onAddTransaction}
-        onTransfer={onTransfer}
         onViewHistory={onViewHistory}
         onRename={() => setRenaming(true)}
         onEditValue={() => setEditing(true)}
@@ -822,8 +756,7 @@ function AccountCard({ account, onAddRecord, onDelete, onRefresh, openModal, ref
               <RecordRow
                 key={rec.id}
                 record={rec}
-                onAddTransaction={() => openModal({ type: 'addTransaction', recordId: rec.id, recordLabel: rec.label })}
-                onTransfer={() => openModal({ type: 'transfer', fromRecordId: rec.id, fromAccountName: account.name })}
+                onAddTransaction={() => openModal({ type: 'transaction', recordId: rec.id })}
                 onViewHistory={() => openModal({ type: 'potHistory', recordId: rec.id, recordLabel: rec.label, recordValue: rec.value })}
                 onDelete={() => deleteRecord(rec.id)}
                 onRefresh={() => { fetchRecords(); onRefresh() }}
@@ -978,14 +911,8 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
 
   useEffect(() => {
     fetchSchedules() // eslint-disable-line react-hooks/set-state-in-effect
-    Promise.all([
-      fetch('/api/records?kind=pot').then(r => r.json()),
-      fetch('/api/records?kind=expense').then(r => r.json()),
-    ]).then(([potData, expenseData]) => {
-      const list = [
-        ...(Array.isArray(potData) ? potData : []),
-        ...(Array.isArray(expenseData) ? expenseData : []),
-      ]
+    fetch('/api/records?kind=pot').then(r => r.json()).then(data => {
+      const list = Array.isArray(data) ? data : []
       setPots(list)
       setFromId(list[0]?.id ?? '')
       setFromAccount(list[0]?.accountName ?? '')
@@ -1088,8 +1015,8 @@ function ScheduledTransfersModal({ onClose, onSaved }) {
           </Field>
           <Field label="Type">
             <select className={sel} value={kind} onChange={e => setKind(e.target.value)}>
-              <option value="income">Income (deposit into record)</option>
-              <option value="transfer">Transfer (record → record)</option>
+              <option value="income">Income (deposit into pot)</option>
+              <option value="transfer">Transfer (pot → pot)</option>
             </select>
           </Field>
           {kind === 'transfer' && (
@@ -1406,9 +1333,9 @@ export default function Dashboard() {
               className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
             >+ Account</button>
             <button
-              onClick={() => setModal({ type: 'transfer' })}
+              onClick={() => setModal({ type: 'transaction' })}
               className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
-            >⇆ Transfer</button>
+            >+ Transaction</button>
             <button
               onClick={() => setModal({ type: 'scheduled' })}
               className="px-3.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
@@ -1485,18 +1412,9 @@ export default function Dashboard() {
           onSaved={fetchAccounts}
         />
       )}
-      {modal.type === 'addTransaction' && (
-        <AddTransactionModal
-          recordId={modal.recordId}
-          recordLabel={modal.recordLabel}
-          onClose={closeModal}
-          onSaved={fetchAccounts}
-        />
-      )}
-      {modal.type === 'transfer' && (
-        <TransferModal
-          initialFromRecordId={modal.fromRecordId}
-          initialFromAccountName={modal.fromAccountName}
+      {modal.type === 'transaction' && (
+        <TransactionModal
+          initialRecordId={modal.recordId}
           onClose={closeModal}
           onSaved={fetchAccounts}
         />

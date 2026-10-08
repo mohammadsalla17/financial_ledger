@@ -46,7 +46,7 @@ export async function POST(req) {
 
     // ── Transfer between two records ─────────────────────────────────────────
     if (body.type === 'transfer') {
-      const { fromRecordId, toRecordId, amount, description } = body
+      const { fromRecordId, toRecordId, amount, description, txnDate } = body
 
       if (!fromRecordId || !toRecordId || amount === undefined) {
         return NextResponse.json(
@@ -64,7 +64,7 @@ export async function POST(req) {
 
       const ref  = randomUUID()
       const amt  = Math.abs(parseFloat(amount))
-      const date = new Date()
+      const date = txnDate ? new Date(txnDate) : new Date()
 
       await prisma.transaction.createMany({
         data: [
